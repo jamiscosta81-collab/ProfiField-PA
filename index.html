@@ -1,0 +1,3063 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0f0d">
+<title>ProfiField — Diagnóstico PROFIBUS PA</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+:root {
+  --bg: #080d0b;
+  --bg2: #0e1512;
+  --bg3: #141e19;
+  --bg4: #1a2820;
+  --surface: #1f3028;
+  --surface2: #253830;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --green: #00E676;
+  --green2: #00c764;
+  --green3: #00a852;
+  --green-glow: rgba(0,230,118,0.15);
+  --green-bg: rgba(0,230,118,0.08);
+  --cyan: #00d4de;
+  --cyan-bg: rgba(0,212,222,0.08);
+  --amber: #f0a500;
+  --amber-bg: rgba(240,165,0,0.10);
+  --red: #f04545;
+  --red-bg: rgba(240,69,69,0.10);
+  --blue: #4a9eff;
+  --blue-bg: rgba(74,158,255,0.08);
+  --text: #e2ebe6;
+  --text2: #7a9484;
+  --text3: #4a5e52;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --r: 10px;
+  --r-sm: 6px;
+  --r-lg: 14px;
+  --header-h: 54px;
+  --tab-h: 44px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+html,body{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column}
+
+/* ══════ SPLASH ══════ */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;animation:splashOut .5s ease 2s forwards}
+@keyframes splashOut{to{opacity:0;pointer-events:none}}
+.splash-icon{width:72px;height:72px;background:var(--green-bg);border:1.5px solid var(--green);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:30px;animation:splashPulse 1.2s ease infinite alternate}
+@keyframes splashPulse{to{box-shadow:0 0 30px var(--green-glow)}}
+.splash-name{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green);letter-spacing:2px}
+.splash-sub{font-size:13px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.splash-bar{width:140px;height:3px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:8px}
+.splash-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:3px;animation:splashFill 1.6s ease forwards}
+@keyframes splashFill{to{width:100%}}
+
+/* ══════ HEADER ══════ */
+.header{height:var(--header-h);flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 16px;background:linear-gradient(180deg,rgba(14,21,18,0.98),rgba(10,15,13,0.95));border-bottom:1px solid var(--border);position:relative;z-index:100;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--green) 50%,transparent 95%);opacity:.3}
+.h-logo{width:36px;height:36px;background:var(--green-bg);border:1px solid rgba(0,230,118,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;position:relative}
+.h-logo::after{content:'';position:absolute;inset:-2px;border-radius:12px;background:radial-gradient(circle,var(--green-glow),transparent 70%);z-index:-1;animation:logoPulse 3s ease-in-out infinite}
+@keyframes logoPulse{0%,100%{opacity:.3}50%{opacity:.6}}
+.h-info{flex:1;min-width:0}
+.h-title{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--green);letter-spacing:1px;line-height:1.2}
+.h-sub{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.h-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:.2s}
+.h-btn:active{background:var(--surface);color:var(--green)}
+
+/* ══════ TAB BAR ══════ */
+.tabs{height:var(--tab-h);flex-shrink:0;display:flex;padding:0 8px;gap:2px;border-bottom:1px solid var(--border);background:var(--bg2);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:0 14px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text3);border-bottom:2px solid transparent;cursor:pointer;transition:.2s;white-space:nowrap;text-transform:uppercase;letter-spacing:.5px}
+.tab:active{background:rgba(255,255,255,0.03)}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
+.tab-icon{font-size:16px}
+
+/* ══════ CONTENT AREA ══════ */
+.content-wrap{flex:1;overflow:hidden;position:relative}
+.panel{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:16px;display:none;-webkit-overflow-scrolling:touch}
+.panel.active{display:block}
+.panel::-webkit-scrollbar{width:3px}
+.panel::-webkit-scrollbar-thumb{background:var(--surface);border-radius:3px}
+
+/* ══════ CARDS ══════ */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px;margin-bottom:12px}
+.card-title{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+
+/* ══════ SECTION TITLE ══════ */
+.sec-title{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+/* ══════ LIVE MAP (grade 0-126) ══════ */
+.livemap-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.lm-cell{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:.15s;position:relative;border:1px solid transparent}
+.lm-cell:active{transform:scale(0.92)}
+
+/* Cell states */
+.lm-empty{background:var(--bg2);color:var(--text3);border-color:var(--border)}
+.lm-master{background:rgba(240,69,69,0.15);color:#f04545;border-color:rgba(240,69,69,0.3)}
+.lm-slave-idle{background:rgba(255,255,255,0.04);color:var(--text2);border-color:var(--border2);font-weight:700}
+.lm-slave-dx{background:rgba(0,230,118,0.12);color:var(--green);border-color:rgba(0,230,118,0.25)}
+.lm-slave-param-err{background:rgba(240,165,0,0.15);color:var(--amber);border-color:rgba(240,165,0,0.3)}
+.lm-slave-config-err{background:rgba(240,69,69,0.12);color:var(--red);border-color:rgba(240,69,69,0.25)}
+.lm-slave-lost{background:var(--bg2);color:var(--text3);border-color:var(--border);text-decoration:line-through}
+.lm-slave-diag{background:rgba(0,230,118,0.12);color:var(--green);border-color:rgba(0,230,118,0.25);animation:diagBlink 1.5s ease infinite}
+@keyframes diagBlink{0%,100%{box-shadow:none}50%{box-shadow:inset 3px -3px 0 0 var(--amber)}}
+
+/* Live Map legend */
+.lm-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.lm-leg-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.lm-leg-dot{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+
+/* Live Map legend chip */
+.lm-leg-chip{display:flex;align-items:center;gap:5px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid transparent;transition:.15s}
+.lm-leg-chip:active,.lm-leg-chip.active{border-color:var(--green);background:var(--green-bg)}
+.lm-leg-count{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)}
+
+/* Context menu */
+.ctx-item{padding:10px 14px;font-size:14px;color:var(--text2);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:8px}
+.ctx-item:active{background:var(--green-bg);color:var(--green)}
+.ctx-item:hover{background:rgba(255,255,255,0.03)}
+
+/* Live Map info panel */
+.lm-info{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:14px;margin-top:12px}
+.lm-info-title{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--cyan);margin-bottom:8px}
+.lm-info-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)}
+.lm-info-row:last-child{border:none}
+.lm-info-label{color:var(--text2)}
+.lm-info-value{color:var(--text);font-family:var(--mono);font-weight:600}
+
+/* ══════ SEMÁFORO / OVERVIEW ══════ */
+.semaforo-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px 0}
+.semaforo{width:80px;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--bg2);border:2px solid var(--border2);border-radius:40px;padding:16px 12px}
+.sem-light{width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,0.1);transition:.4s;position:relative}
+.sem-light.off{opacity:.15}
+.sem-light.on{opacity:1}
+.sem-red{background:radial-gradient(circle at 40% 40%,#ff6b6b,#f04545,#c62828)}
+.sem-red.on{box-shadow:0 0 20px rgba(240,69,69,0.6)}
+.sem-amber{background:radial-gradient(circle at 40% 40%,#ffd54f,#f0a500,#e65100)}
+.sem-amber.on{box-shadow:0 0 20px rgba(240,165,0,0.6)}
+.sem-green{background:radial-gradient(circle at 40% 40%,#69f0ae,#00E676,#00a852)}
+.sem-green.on{box-shadow:0 0 20px rgba(0,230,118,0.6)}
+
+.sem-stats{width:100%;max-width:340px}
+.sem-stat-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.sem-stat-row:last-child{border:none}
+.sem-stat-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.sem-stat-label{flex:1;font-size:14px;color:var(--text2)}
+.sem-stat-time{font-family:var(--mono);font-size:14px;color:var(--text)}
+.sem-stat-pct{font-family:var(--mono);font-size:14px;font-weight:700;width:55px;text-align:right}
+
+/* Network summary */
+.net-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.ns-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.ns-label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.ns-value{font-family:var(--mono);font-size:22px;font-weight:700;margin-top:2px}
+.ns-value.ok{color:var(--green)}
+.ns-value.wn{color:var(--amber)}
+.ns-value.dn{color:var(--red)}
+.ns-value.info{color:var(--cyan)}
+
+/* ══════ SCOPE VIEW (placeholder) ══════ */
+.scope-canvas-wrap{background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;position:relative}
+.scope-canvas{width:100%;height:220px;display:block}
+.scope-controls{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.scope-btn{padding:6px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:.2s}
+.scope-btn:active,.scope-btn.active{background:var(--green-bg);color:var(--green);border-color:rgba(0,230,118,0.3)}
+.scope-select{padding:6px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--mono);font-size:13px;outline:none;-webkit-appearance:none;cursor:pointer}
+.scope-select:focus{border-color:var(--green)}
+
+/* ══════ BARGRAPH ══════ */
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:180px;padding:0 4px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;min-width:28px}
+.bar-val{font-family:var(--mono);font-size:8px;color:var(--text2)}
+.bar-fill{width:100%;border-radius:3px 3px 0 0;transition:.4s;min-height:2px}
+.bar-fill.ok{background:linear-gradient(180deg,var(--green),var(--green3))}
+.bar-fill.wn{background:linear-gradient(180deg,var(--amber),#c77800)}
+.bar-fill.dn{background:linear-gradient(180deg,var(--red),#c62828)}
+.bar-addr{font-family:var(--mono);font-size:8px;color:var(--text3);padding-top:3px;border-top:1px solid var(--border)}
+.bar-ref{position:absolute;left:0;right:0;border-top:1.5px dashed var(--red);opacity:.4}
+
+/* ══════ FALHAS PA ══════ */
+.fault-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.fault-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;transition:.15s}
+.fault-hdr:active{background:rgba(255,255,255,0.02)}
+.fault-code{font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0}
+.fault-code.dn{background:var(--red-bg);color:var(--red)}
+.fault-code.wn{background:var(--amber-bg);color:var(--amber)}
+.fault-code.ok{background:var(--green-bg);color:var(--green)}
+.fault-name{flex:1;font-size:14px;font-weight:500;color:var(--text)}
+.fault-arrow{color:var(--text3);font-size:12px;transition:.3s}
+.fault-arrow.open{transform:rotate(180deg)}
+.fault-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.fault-body.open{max-height:600px}
+.fault-content{padding:0 14px 14px}
+.fault-section{margin-top:10px}
+.fault-section-title{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--cyan);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.fault-li{font-size:13px;color:var(--text2);padding:4px 0 4px 14px;position:relative;line-height:1.5}
+.fault-li::before{content:'›';position:absolute;left:0;color:var(--green)}
+
+/* ══════ IA ASSIST ══════ */
+.ia-input-wrap{position:relative}
+.ia-input{width:100%;padding:14px 16px;padding-right:48px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-size:15px;resize:none;min-height:90px;outline:none;transition:.2s}
+.ia-input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-glow)}
+.ia-send{position:absolute;right:8px;bottom:8px;width:32px;height:32px;border-radius:8px;background:var(--green);color:var(--bg);border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.ia-send:active{transform:scale(0.9)}
+.ia-presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ia-chip{padding:8px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;font-size:13px;color:var(--text2);cursor:pointer;transition:.2s}
+.ia-chip:active{background:var(--green-bg);color:var(--green);border-color:rgba(0,230,118,0.3)}
+.ia-result{margin-top:14px;min-height:20px}
+
+/* AI response cards */
+.ai-step{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px}
+.ai-step-num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px}
+.ai-step-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.ai-step-body{font-size:13px;color:var(--text2);line-height:1.6}
+.ai-step.danger{border-color:rgba(240,69,69,0.2)}
+.ai-step.success{border-color:rgba(0,230,118,0.2)}
+
+/* ══════ REPORT ══════ */
+.rpt-section{margin-bottom:16px}
+.rpt-field{margin-bottom:10px}
+.rpt-label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.rpt-input{width:100%;padding:10px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:var(--sans);font-size:13px;outline:none}
+.rpt-input:focus{border-color:var(--green)}
+.rpt-btn{width:100%;padding:14px;background:var(--green);color:var(--bg);border:none;border-radius:var(--r);font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:.2s}
+.rpt-btn:active{transform:scale(0.98);opacity:.9}
+
+/* ══════ SEARCH ══════ */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-input{width:100%;padding:10px 36px 10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:13px;outline:none}
+.search-input:focus{border-color:var(--green)}
+.search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;display:none}
+.search-input:not(:placeholder-shown) ~ .search-clear{display:block}
+
+/* ══════ MODAL SOBRE ══════ */
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-lg);padding:24px;max-width:340px;width:100%;max-height:80vh;overflow-y:auto}
+.modal-close{float:right;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-icon">⚡</div>
+  <div class="splash-name">PROFIFIELD</div>
+  <div class="splash-sub">Diagnóstico PROFIBUS PA</div>
+  <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="h-logo">⚡</div>
+  <div class="h-info">
+    <div class="h-title">PROFIFIELD</div>
+    <div class="h-sub">Diagnóstico PROFIBUS PA</div>
+  </div>
+  <button class="h-btn" onclick="toggleModal()">ℹ</button>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="livemap"><span class="tab-icon">🗺</span> Live Map</div>
+  <div class="tab" data-tab="semaforo"><span class="tab-icon">🚦</span> Semáforo</div>
+  <div class="tab" data-tab="scope"><span class="tab-icon">📊</span> Scope</div>
+  <div class="tab" data-tab="bargraph"><span class="tab-icon">📶</span> BarLevel</div>
+  <div class="tab" data-tab="falhas"><span class="tab-icon">⚠</span> Falhas PA</div>
+  <div class="tab" data-tab="ia"><span class="tab-icon">🤖</span> IA Assist</div>
+  <div class="tab" data-tab="calc"><span class="tab-icon">🧮</span> Calculadora</div>
+  <div class="tab" data-tab="produto"><span class="tab-icon">📦</span> Produto</div>
+  <div class="tab" data-tab="historico"><span class="tab-icon">💾</span> Histórico</div>
+  <div class="tab" data-tab="report"><span class="tab-icon">📄</span> Report</div>
+  <div class="tab" data-tab="dev"><span class="tab-icon">👨‍💻</span> Dev</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content-wrap">
+
+  <!-- ══ LIVE MAP ══ -->
+  <div class="panel active" id="p-livemap">
+    <div class="sec-title">Live List — Dispositivos na Rede</div>
+    <!-- Bridge status -->
+    <div id="bridge-bar" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+      <div id="bridge-dot" style="width:10px;height:10px;border-radius:50%;background:var(--text3);flex-shrink:0"></div>
+      <span id="bridge-status" style="font-family:var(--mono);font-size:12px;color:var(--text3);flex:1">Bridge desconectado</span>
+      <button class="scope-btn" id="bridge-btn" onclick="toggleBridge()" style="font-size:12px;padding:6px 12px;background:var(--green-bg);color:var(--green);border-color:rgba(0,230,118,0.3)">🔗 Conectar</button>
+    </div>
+
+    <!-- SIMULADOR DE TESTE -->
+    <div class="card" id="sim-panel" style="padding:10px 14px;margin-bottom:8px;border-color:rgba(0,212,222,0.15)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:14px">🧪</span>
+        <span style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--cyan)">Simulador de Teste</span>
+        <span style="flex:1"></span>
+        <button class="scope-btn" onclick="toggleSimPanel()" id="sim-toggle" style="font-size:11px;padding:3px 8px">▼</button>
+      </div>
+      <div id="sim-body" style="display:none">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px;line-height:1.5">Simula cenários de rede PA sem hardware. Escolha um cenário:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <button class="ia-chip" onclick="simCenario('saudavel')" style="border-color:rgba(0,230,118,0.3);color:var(--green)">🟢 Rede Saudável</button>
+          <button class="ia-chip" onclick="simCenario('degradada')" style="border-color:rgba(240,165,0,0.3);color:var(--amber)">🟡 Rede Degradada</button>
+          <button class="ia-chip" onclick="simCenario('critica')" style="border-color:rgba(240,69,69,0.3);color:var(--red)">🔴 Rede Crítica</button>
+          <button class="ia-chip" onclick="simCenario('comissionamento')" style="border-color:rgba(0,212,222,0.3);color:var(--cyan)">🔧 Comissionamento</button>
+          <button class="ia-chip" onclick="simCenario('grande')" style="border-color:rgba(74,158,255,0.3);color:var(--blue)">📡 Rede Grande (25 dev)</button>
+          <button class="ia-chip" onclick="simCenario('random')">🎲 Aleatório</button>
+        </div>
+        <div id="sim-actions" style="margin-top:8px;gap:6px;flex-wrap:wrap;display:none">
+          <button class="scope-btn" onclick="switchTab('report')" style="font-size:12px;padding:6px 12px;background:var(--green-bg);color:var(--green);border-color:rgba(0,230,118,0.3)">📄 Ir para Relatório</button>
+          <button class="scope-btn" onclick="switchTab('semaforo')" style="font-size:12px;padding:6px 12px">🚦 Ver Semáforo</button>
+          <button class="scope-btn" onclick="switchTab('bargraph')" style="font-size:12px;padding:6px 12px">📶 Ver BarLevel</button>
+          <button class="scope-btn" onclick="switchTab('calc')" style="font-size:12px;padding:6px 12px">🧮 Ver Cálculos</button>
+        </div>
+        <div id="sim-log" style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3);max-height:60px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- LEGENDA INTERATIVA NO TOPO -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--text3)">Dispositivos:</span>
+        <span style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)" id="leg-total">0</span>
+        <span style="flex:1"></span>
+        <button class="scope-btn" onclick="filterGrid('all')" style="font-size:11px;padding:3px 10px" data-filter="all">👁 Todos</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+        <div class="lm-leg-chip" onclick="filterGrid('master')" data-filter="master">
+          <div style="width:12px;height:12px;border-radius:3px;background:rgba(240,69,69,0.35)"></div>
+          <span class="lm-leg-count" id="leg-master">0</span> Mestre
+        </div>
+        <div class="lm-leg-chip" onclick="filterGrid('slave-idle')" data-filter="slave-idle">
+          <div style="width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.1)"></div>
+          <span class="lm-leg-count" id="leg-idle">0</span> Escravo
+        </div>
+        <div class="lm-leg-chip" onclick="filterGrid('slave-dx')" data-filter="slave-dx">
+          <div style="width:12px;height:12px;border-radius:3px;background:rgba(0,230,118,0.3)"></div>
+          <span class="lm-leg-count" style="color:var(--green)" id="leg-dx">0</span> Em troca
+        </div>
+        <div class="lm-leg-chip" onclick="filterGrid('diag')" data-filter="diag">
+          <div style="width:12px;height:12px;border-radius:3px;background:rgba(0,230,118,0.2);border:1px solid var(--amber)"></div>
+          <span class="lm-leg-count" style="color:var(--cyan)" id="leg-diag">0</span> Ext-Diag
+        </div>
+        <div class="lm-leg-chip" onclick="filterGrid('param-err')" data-filter="param-err">
+          <div style="width:12px;height:12px;border-radius:3px;background:rgba(240,165,0,0.35)"></div>
+          <span class="lm-leg-count" style="color:var(--amber)" id="leg-perr">0</span> Err Param
+        </div>
+        <div class="lm-leg-chip" onclick="filterGrid('config-err')" data-filter="config-err">
+          <div style="width:12px;height:12px;border-radius:3px;background:rgba(240,69,69,0.3)"></div>
+          <span class="lm-leg-count" style="color:var(--red)" id="leg-cerr">0</span> Err Config
+        </div>
+        <div class="lm-leg-chip" onclick="filterGrid('lost')" data-filter="lost">
+          <div style="width:12px;height:12px;border-radius:3px;background:var(--bg);border:1px solid var(--text3)"></div>
+          <span class="lm-leg-count" style="color:var(--text3)" id="leg-lost">0</span> Perdido
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-family:var(--mono);font-size:13px;color:var(--cyan)">HSA=<span id="hsa-val">126</span></span>
+      <span style="font-family:var(--mono);font-size:13px;color:var(--text3)">Baud: <span id="baud-val">45.45 kbps</span></span>
+      <span style="flex:1"></span>
+      <button class="scope-btn" onclick="filterGrid('all')" style="font-size:11px;padding:4px 10px">👁 Todos</button>
+      <button class="scope-btn" onclick="simNetwork()" style="font-size:12px;padding:6px 12px">🔄 Simular</button>
+    </div>
+
+    <!-- Grid -->
+    <div class="livemap-grid" id="livemap-grid"></div>
+
+    <!-- Info panel do nó selecionado -->
+    <div class="lm-info" id="lm-info" style="display:none">
+      <div class="lm-info-title">📡 Info Panel — Nó #<span id="lm-info-addr">0</span></div>
+      <div id="lm-info-body"></div>
+    </div>
+  </div>
+
+  <!-- CONTEXT MENU (aparece no right-click / long-press) -->
+  <div id="ctx-menu" style="display:none;position:fixed;z-index:998;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 0;min-width:220px;box-shadow:0 8px 30px rgba(0,0,0,0.5)">
+    <div id="ctx-title" style="padding:8px 14px;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);border-bottom:1px solid var(--border)">Nó #0</div>
+    <div id="ctx-status" style="padding:6px 14px;font-size:13px;color:var(--text2)"></div>
+    <div style="height:1px;background:var(--border);margin:4px 0"></div>
+    <div class="ctx-item" onclick="ctxAction('info')">📋 Ver detalhes completos</div>
+    <div class="ctx-item" onclick="ctxAction('scope')">📊 Abrir no ScopeView</div>
+    <div class="ctx-item" onclick="ctxAction('ia')">🤖 Diagnóstico IA</div>
+    <div class="ctx-item" onclick="ctxAction('falhas')">⚠ Consultar falhas PA</div>
+    <div class="ctx-item" id="ctx-diag-detail" style="display:none" onclick="ctxAction('diag')">🔍 Ver diagnóstico estendido</div>
+  </div>
+
+  <!-- ══ SEMÁFORO ══ -->
+  <div class="panel" id="p-semaforo">
+    <div class="sec-title">Overview — Condição da Rede</div>
+    <div class="semaforo-wrap">
+      <div class="semaforo">
+        <div class="sem-light sem-red off" id="sem-r"></div>
+        <div class="sem-light sem-amber off" id="sem-a"></div>
+        <div class="sem-light sem-green on" id="sem-g"></div>
+      </div>
+
+      <div class="sem-stats">
+        <div class="sem-stat-row">
+          <div class="sem-stat-dot" style="background:var(--red)"></div>
+          <div class="sem-stat-label">Crítico</div>
+          <div class="sem-stat-time" id="sem-t-r">0:00:00</div>
+          <div class="sem-stat-pct" style="color:var(--red)" id="sem-p-r">0.0%</div>
+        </div>
+        <div class="sem-stat-row">
+          <div class="sem-stat-dot" style="background:var(--amber)"></div>
+          <div class="sem-stat-label">Atenção</div>
+          <div class="sem-stat-time" id="sem-t-a">0:00:00</div>
+          <div class="sem-stat-pct" style="color:var(--amber)" id="sem-p-a">0.0%</div>
+        </div>
+        <div class="sem-stat-row">
+          <div class="sem-stat-dot" style="background:var(--green)"></div>
+          <div class="sem-stat-label">Normal</div>
+          <div class="sem-stat-time" id="sem-t-g">0:00:14</div>
+          <div class="sem-stat-pct" style="color:var(--green)" id="sem-p-g">100.0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:8px">
+      <div class="card-title">Network Summary</div>
+      <div class="net-summary">
+        <div class="ns-item"><div class="ns-label">Baud Rate</div><div class="ns-value info" id="ns-baud">45.45 kbps</div></div>
+        <div class="ns-item"><div class="ns-label">Mestres</div><div class="ns-value ok" id="ns-masters">1</div></div>
+        <div class="ns-item"><div class="ns-label">Escravos</div><div class="ns-value ok" id="ns-slaves">0</div></div>
+        <div class="ns-item"><div class="ns-label">Em Troca</div><div class="ns-value ok" id="ns-dx">0</div></div>
+        <div class="ns-item"><div class="ns-label">Erros Param.</div><div class="ns-value" id="ns-perr">0</div></div>
+        <div class="ns-item"><div class="ns-label">Erros Config.</div><div class="ns-value" id="ns-cerr">0</div></div>
+        <div class="ns-item"><div class="ns-label">Retries</div><div class="ns-value" id="ns-retries">0</div></div>
+        <div class="ns-item"><div class="ns-label">Slave Lost</div><div class="ns-value" id="ns-lost">0</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Condition Details</div>
+      <div id="sem-details" style="font-size:14px;color:var(--text2)">
+        <div style="color:var(--green)">✅ Rede operando normalmente. Sem eventos registrados.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCOPE VIEW ══ -->
+  <div class="panel" id="p-scope">
+    <div class="sec-title">ScopeView — Osciloscópio PROFIBUS</div>
+
+    <!-- Controls -->
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center">
+      <label style="font-size:12px;color:var(--text2)">Endereço:</label>
+      <select id="scope-addr" class="scope-select" onchange="drawScope()">
+        <option value="3">3 — Rosemount 3051</option>
+        <option value="5">5 — VEGAPULS 64</option>
+        <option value="8">8 — Endress TMP131</option>
+        <option value="11">11 — Fisher DVC6200</option>
+        <option value="14">14 — ABB 266HSH</option>
+        <option value="16">16 — Yokogawa EJA</option>
+        <option value="19">19 — Siemens SITRANS</option>
+        <option value="22">22 — Krohne OPTIFLUX</option>
+        <option value="25">25 — Endress Promass</option>
+      </select>
+      <label style="font-size:12px;color:var(--text2);margin-left:6px">Modo:</label>
+      <select id="scope-mode" class="scope-select" onchange="drawScope()">
+        <option value="badiff">B-A Diff</option>
+        <option value="ab">A & B</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center">
+      <label style="font-size:12px;color:var(--text2)">Volt/Div:</label>
+      <select id="scope-vdiv" class="scope-select" onchange="drawScope()">
+        <option value="0.5">0.5V</option>
+        <option value="1" selected>1V</option>
+        <option value="2">2V</option>
+      </select>
+      <label style="font-size:12px;color:var(--text2);margin-left:6px">Time:</label>
+      <select id="scope-time" class="scope-select" onchange="drawScope()">
+        <option value="1">1 μSec</option>
+        <option value="2">2 μSec</option>
+        <option value="5" selected>5 μSec</option>
+        <option value="10">10 μSec</option>
+      </select>
+      <button class="scope-btn" onclick="scopeFreeze=!scopeFreeze;this.classList.toggle('active')" style="margin-left:auto;font-size:12px;padding:6px 12px">❄ Freeze</button>
+    </div>
+
+    <!-- Canvas -->
+    <div class="scope-canvas-wrap">
+      <canvas id="scope-canvas" class="scope-canvas" width="800" height="280"></canvas>
+      <div id="scope-overlay" style="position:absolute;top:8px;left:10px;font-family:var(--mono);font-size:11px;color:var(--green);opacity:.8;pointer-events:none">
+        <div id="scope-info-line"></div>
+      </div>
+    </div>
+
+    <!-- Cursor info -->
+    <div class="card" style="margin-top:10px">
+      <div class="card-title">Medição</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="ns-item"><div class="ns-label">Amplitude</div><div class="ns-value ok" id="scope-amp">—</div></div>
+        <div class="ns-item"><div class="ns-label">Frequência</div><div class="ns-value info" id="scope-freq">—</div></div>
+        <div class="ns-item"><div class="ns-label">Qualidade</div><div class="ns-value" id="scope-qual">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BARLEVEL ══ -->
+  <div class="panel" id="p-bargraph">
+    <div class="sec-title">BarLevel — Amplitude dos Sinais</div>
+
+    <!-- Controls -->
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center">
+      <label style="font-size:12px;color:var(--text2)">Modo:</label>
+      <select id="bar-mode" class="scope-select" onchange="drawBargraph()">
+        <option value="diff">AB Diff Voltage</option>
+        <option value="stable">AB Diff Stable</option>
+        <option value="pa-level">PA Signal Level</option>
+        <option value="pa-jitter">PA Jitter</option>
+      </select>
+      <label style="font-size:12px;color:var(--text2);margin-left:6px">Ordenar:</label>
+      <select id="bar-sort" class="scope-select" onchange="drawBargraph()">
+        <option value="addr">Endereço</option>
+        <option value="high">Nível ↓</option>
+        <option value="low">Nível ↑</option>
+      </select>
+      <button class="scope-btn" onclick="drawBargraph()" style="margin-left:auto;font-size:12px;padding:6px 12px">🔄 Atualizar</button>
+    </div>
+
+    <!-- Bargraph canvas -->
+    <div class="scope-canvas-wrap">
+      <canvas id="bar-canvas" class="scope-canvas" width="800" height="240"></canvas>
+    </div>
+
+    <!-- Reference info -->
+    <div class="card" style="margin-top:10px">
+      <div class="card-title">Referência de Níveis</div>
+      <div id="bar-ref-info" style="font-size:13px;color:var(--text2);line-height:1.6">
+        <div><span style="color:var(--green)">●</span> Acima de 750 mVpp — Sinal adequado (PA)</div>
+        <div><span style="color:var(--amber)">●</span> Entre 400-750 mVpp — Margem reduzida</div>
+        <div><span style="color:var(--red)">●</span> Abaixo de 400 mVpp — Nível crítico</div>
+        <div style="margin-top:6px;font-size:12px;color:var(--text2)">Linha tracejada vermelha = referência mínima. Faixa ideal PA: 750-1000 mVpp.</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card">
+      <div class="card-title">Estatísticas</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="ns-item"><div class="ns-label">Mínimo</div><div class="ns-value dn" id="bar-min">—</div></div>
+        <div class="ns-item"><div class="ns-label">Médio</div><div class="ns-value info" id="bar-avg">—</div></div>
+        <div class="ns-item"><div class="ns-label">Máximo</div><div class="ns-value ok" id="bar-max">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FALHAS PA ══ -->
+  <div class="panel" id="p-falhas">
+    <div class="sec-title">Banco de Falhas PROFIBUS PA</div>
+
+    <!-- Sub-tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto">
+      <button class="scope-btn active" onclick="filterFaults('all',this)" style="font-size:12px;padding:6px 12px">Todas</button>
+      <button class="scope-btn" onclick="filterFaults('physical',this)" style="font-size:12px;padding:6px 12px">🔌 Físico</button>
+      <button class="scope-btn" onclick="filterFaults('comm',this)" style="font-size:12px;padding:6px 12px">📡 Comunicação</button>
+      <button class="scope-btn" onclick="filterFaults('config',this)" style="font-size:12px;padding:6px 12px">⚙ Config</button>
+      <button class="scope-btn" onclick="filterFaults('device',this)" style="font-size:12px;padding:6px 12px">🔧 Dispositivo</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="fault-search" placeholder="Buscar falha..." oninput="searchFaults()" style="font-size:14px">
+      <button class="search-clear" onclick="document.getElementById('fault-search').value='';searchFaults()">✕</button>
+    </div>
+
+    <!-- Fault list -->
+    <div id="fault-list"></div>
+  </div>
+
+  <!-- ══ IA ASSIST ══ -->
+  <div class="panel" id="p-ia">
+    <div class="sec-title">IA Assist — Diagnóstico Inteligente</div>
+
+    <div class="card">
+      <div class="card-title">Descreva o problema</div>
+      <div class="ia-input-wrap">
+        <textarea class="ia-input" id="ia-input" placeholder="Ex: Escravo endereço 16 com erro de parametrização, tensão do segmento 18V, sinal PA com 420mVpp..."></textarea>
+        <button class="ia-send" id="ia-send-btn" onclick="sendIA()">➤</button>
+      </div>
+
+      <div class="ia-presets" style="margin-top:12px">
+        <div class="ia-chip" onclick="setPreset('Slave lost intermitente no endereço 22, retries altos')">Slave Lost</div>
+        <div class="ia-chip" onclick="setPreset('Sinal PA abaixo de 500mVpp em vários dispositivos')">Sinal Baixo</div>
+        <div class="ia-chip" onclick="setPreset('Erro de parametrização após troca de transmissor')">Erro Param</div>
+        <div class="ia-chip" onclick="setPreset('Jitter alto acima de 2us, rede instável')">Jitter Alto</div>
+        <div class="ia-chip" onclick="setPreset('Tensão DC do segmento abaixo de 14V')">Tensão DC Baixa</div>
+        <div class="ia-chip" onclick="setPreset('Reflexões na oscilografia, ruído no sinal')">Reflexões/Ruído</div>
+        <div class="ia-chip" onclick="setPreset('Comissionamento novo segmento PA, checklist')">Comissionamento</div>
+        <div class="ia-chip" onclick="setPreset('Diagnóstico ext-diag ativo no posicionador de válvula')">Ext-Diag Válvula</div>
+      </div>
+    </div>
+
+    <!-- AI Response area -->
+    <div id="ia-result"></div>
+
+    <div class="card" style="margin-top:12px;border-color:rgba(0,230,118,0.15)">
+      <div style="font-size:13px;color:var(--text2);line-height:1.6">
+        <strong style="color:var(--green)">💡 Dica:</strong> Quanto mais detalhes você informar (endereço, tensão, tipo de dispositivo, sintoma), mais preciso será o diagnóstico da IA.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CALCULADORA PA ══ -->
+  <div class="panel" id="p-calc">
+    <div class="sec-title">🧮 Calculadora de Segmento PA</div>
+
+    <!-- CALC 1: Corrente total do segmento -->
+    <div class="card">
+      <div class="card-title">⚡ Corrente Total do Segmento</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+        Calcula a corrente total consumida pelos dispositivos PA no segmento e compara com a capacidade da fonte.
+      </div>
+
+      <div class="rpt-field">
+        <div class="rpt-label">Corrente da fonte (mA)</div>
+        <input type="number" class="rpt-input" id="calc-fonte-ma" value="500" min="50" max="2000" oninput="calcCorrente()" style="font-size:15px">
+      </div>
+
+      <div style="font-size:13px;color:var(--text2);margin:8px 0 4px">Dispositivos no segmento:</div>
+      <div id="calc-dev-list">
+        <div class="calc-dev-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+          <input type="text" class="rpt-input" placeholder="Tag" value="PT-1001" style="flex:2;font-size:13px;padding:8px">
+          <input type="number" class="rpt-input" placeholder="mA" value="12" min="1" max="100" oninput="calcCorrente()" style="flex:1;font-size:13px;padding:8px">
+          <span style="font-size:12px;color:var(--text3);width:24px">mA</span>
+        </div>
+        <div class="calc-dev-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+          <input type="text" class="rpt-input" placeholder="Tag" value="LT-1002" style="flex:2;font-size:13px;padding:8px">
+          <input type="number" class="rpt-input" placeholder="mA" value="15" min="1" max="100" oninput="calcCorrente()" style="flex:1;font-size:13px;padding:8px">
+          <span style="font-size:12px;color:var(--text3);width:24px">mA</span>
+        </div>
+        <div class="calc-dev-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+          <input type="text" class="rpt-input" placeholder="Tag" value="FV-1004" style="flex:2;font-size:13px;padding:8px">
+          <input type="number" class="rpt-input" placeholder="mA" value="20" min="1" max="100" oninput="calcCorrente()" style="flex:1;font-size:13px;padding:8px">
+          <span style="font-size:12px;color:var(--text3);width:24px">mA</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="scope-btn" onclick="addDevRow()" style="font-size:12px;padding:6px 12px">➕ Adicionar</button>
+        <button class="scope-btn" onclick="removeDevRow()" style="font-size:12px;padding:6px 12px">➖ Remover</button>
+      </div>
+
+      <!-- Resultado -->
+      <div id="calc-corrente-result" style="margin-top:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="ns-item"><div class="ns-label">Consumo Total</div><div class="ns-value" id="calc-consumo" style="font-size:20px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Capacidade Fonte</div><div class="ns-value info" id="calc-fonte-cap" style="font-size:20px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Margem</div><div class="ns-value" id="calc-margem" style="font-size:20px">—</div></div>
+        </div>
+        <div id="calc-corrente-semaforo" style="margin-top:8px;padding:10px 12px;border-radius:var(--r-sm);font-size:14px;font-weight:600"></div>
+      </div>
+    </div>
+
+    <!-- CALC 2: Comprimento máximo de cabo -->
+    <div class="card">
+      <div class="card-title">📏 Comprimento Máximo de Cabo</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+        Calcula o comprimento máximo do trunk e spurs baseado no tipo de cabo e número de dispositivos.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="rpt-field">
+          <div class="rpt-label">Tipo de cabo</div>
+          <select class="scope-select" id="calc-cabo-tipo" onchange="calcCabo()" style="width:100%;font-size:14px;padding:8px">
+            <option value="a">Tipo A (recomendado)</option>
+            <option value="b">Tipo B</option>
+            <option value="c">Tipo C</option>
+            <option value="d">Tipo D</option>
+          </select>
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Nº de dispositivos</div>
+          <input type="number" class="rpt-input" id="calc-cabo-devices" value="10" min="1" max="32" oninput="calcCabo()" style="font-size:15px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Trunk atual (m)</div>
+          <input type="number" class="rpt-input" id="calc-cabo-trunk" value="500" min="0" max="5000" oninput="calcCabo()" style="font-size:15px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Spur médio (m)</div>
+          <input type="number" class="rpt-input" id="calc-cabo-spur" value="15" min="0" max="120" oninput="calcCabo()" style="font-size:15px">
+        </div>
+      </div>
+
+      <div id="calc-cabo-result" style="margin-top:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="ns-item"><div class="ns-label">Trunk Máximo</div><div class="ns-value ok" id="calc-trunk-max" style="font-size:20px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Spur Máximo</div><div class="ns-value info" id="calc-spur-max" style="font-size:20px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Comprimento Total</div><div class="ns-value" id="calc-total-len" style="font-size:20px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Margem Trunk</div><div class="ns-value" id="calc-trunk-margem" style="font-size:20px">—</div></div>
+        </div>
+        <div id="calc-cabo-semaforo" style="margin-top:8px;padding:10px 12px;border-radius:var(--r-sm);font-size:14px;font-weight:600"></div>
+      </div>
+    </div>
+
+    <!-- CALC 3: Número máximo de devices -->
+    <div class="card">
+      <div class="card-title">📡 Máximo de Dispositivos por Segmento</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+        Calcula quantos dispositivos PA cabem no segmento baseado na corrente disponível.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="rpt-field">
+          <div class="rpt-label">Corrente da fonte (mA)</div>
+          <input type="number" class="rpt-input" id="calc-max-fonte" value="500" min="50" max="2000" oninput="calcMaxDevices()" style="font-size:15px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Corrente média por device (mA)</div>
+          <input type="number" class="rpt-input" id="calc-max-idev" value="13" min="1" max="100" oninput="calcMaxDevices()" style="font-size:15px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Tipo de proteção</div>
+          <select class="scope-select" id="calc-max-prot" onchange="calcMaxDevices()" style="width:100%;font-size:14px;padding:8px">
+            <option value="fisco">FISCO (máx 10 devices)</option>
+            <option value="entity">Entity (máx 4-6 devices)</option>
+            <option value="hpt" selected>High Power Trunk (máx 32)</option>
+            <option value="none">Sem proteção Ex (máx 32)</option>
+          </select>
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Devices planejados</div>
+          <input type="number" class="rpt-input" id="calc-max-plan" value="8" min="1" max="32" oninput="calcMaxDevices()" style="font-size:15px">
+        </div>
+      </div>
+
+      <div id="calc-max-result" style="margin-top:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="ns-item"><div class="ns-label">Máx. por Corrente</div><div class="ns-value ok" id="calc-max-byI" style="font-size:22px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Máx. por Proteção</div><div class="ns-value info" id="calc-max-byP" style="font-size:22px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Máx. Real</div><div class="ns-value" id="calc-max-real" style="font-size:22px;font-weight:800">—</div></div>
+        </div>
+        <div id="calc-max-semaforo" style="margin-top:8px;padding:10px 12px;border-radius:var(--r-sm);font-size:14px;font-weight:600"></div>
+      </div>
+    </div>
+
+    <!-- CALC 4: Queda de tensão -->
+    <div class="card">
+      <div class="card-title">🔋 Queda de Tensão no Cabo</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+        Estima a tensão disponível no dispositivo mais distante do segmento.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="rpt-field">
+          <div class="rpt-label">Tensão da fonte (V)</div>
+          <input type="number" class="rpt-input" id="calc-vdrop-fonte" value="24" min="9" max="32" step="0.1" oninput="calcVdrop()" style="font-size:15px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Corrente total (mA)</div>
+          <input type="number" class="rpt-input" id="calc-vdrop-i" value="150" min="1" max="500" oninput="calcVdrop()" style="font-size:15px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Comprimento trunk (m)</div>
+          <input type="number" class="rpt-input" id="calc-vdrop-len" value="500" min="1" max="1900" oninput="calcVdrop()" style="font-size:15px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Resistência cabo (Ω/km)</div>
+          <input type="number" class="rpt-input" id="calc-vdrop-r" value="44" min="10" max="150" step="1" oninput="calcVdrop()" style="font-size:15px">
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Tipo A: ~44 Ω/km (par)</div>
+        </div>
+      </div>
+
+      <div id="calc-vdrop-result" style="margin-top:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="ns-item"><div class="ns-label">Queda no Cabo</div><div class="ns-value dn" id="calc-vdrop-drop" style="font-size:20px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Tensão no Device</div><div class="ns-value" id="calc-vdrop-vdev" style="font-size:20px">—</div></div>
+          <div class="ns-item"><div class="ns-label">Tensão Mín. PA</div><div class="ns-value info" id="calc-vdrop-min" style="font-size:20px">9V</div></div>
+        </div>
+        <div id="calc-vdrop-semaforo" style="margin-top:8px;padding:10px 12px;border-radius:var(--r-sm);font-size:14px;font-weight:600"></div>
+      </div>
+    </div>
+
+    <!-- Referência rápida -->
+    <div class="card" style="border-color:rgba(0,212,222,0.15)">
+      <div class="card-title" style="color:var(--cyan)">📖 Referência Rápida PROFIBUS PA</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.8">
+        <div class="lm-info-row"><span class="lm-info-label">Tensão do barramento</span><span class="lm-info-value">9V a 32V DC</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Sinal AC (amplitude)</span><span class="lm-info-value">750 a 1000 mVpp</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Baud rate PA</span><span class="lm-info-value">31.25 kbit/s</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Corrente por device</span><span class="lm-info-value">Típico 10-20 mA</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Máx. devices FISCO</span><span class="lm-info-value">10</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Máx. devices HPT</span><span class="lm-info-value">32</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Trunk máx. Tipo A</span><span class="lm-info-value">1900 m</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Spur máx.</span><span class="lm-info-value">30 m (120m sem junção)</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Terminações</span><span class="lm-info-value">2 por segmento (extremidades)</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Cabo recomendado</span><span class="lm-info-value">Tipo A (~44 Ω/km par)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PRODUTO ══ -->
+  <div class="panel" id="p-produto">
+    <div class="sec-title">📦 FieldConnex DM-AM — Mobile Fieldbus Diagnostic</div>
+
+    <div class="card">
+      <div class="card-title">Identificação</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="ns-item"><div class="ns-label">Fabricante</div><div class="ns-value info" style="font-size:16px">Pepperl+Fuchs</div></div>
+        <div class="ns-item"><div class="ns-label">Part Number</div><div class="ns-value ok" style="font-size:16px">187225</div></div>
+        <div class="ns-item"><div class="ns-label">Modelo</div><div class="ns-value" style="font-size:14px;color:var(--text)">DM-AM</div></div>
+        <div class="ns-item"><div class="ns-label">Linha</div><div class="ns-value" style="font-size:14px;color:var(--cyan)">FieldConnex®</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Especificações Técnicas</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.8">
+        <div class="lm-info-row"><span class="lm-info-label">Tipo</span><span class="lm-info-value">Mobile Fieldbus Diagnostic</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Interface PC</span><span class="lm-info-value">USB 2.0</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Interface Campo</span><span class="lm-info-value">PROFIBUS PA / FF H1</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Alimentação</span><span class="lm-info-value">DC 20-30V / 100mA</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Temperatura</span><span class="lm-info-value">-20°C a +60°C</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Certificação</span><span class="lm-info-value">ATEX II 3G EEx nA [nL] IIC T4</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">TÜV</span><span class="lm-info-value">05 ATEX 2923 X</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">Fabricação</span><span class="lm-info-value">Made in Germany</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Como Conectar</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.8">
+        <div class="fault-li"><strong style="color:var(--green)">1.</strong> Conecte o cabo USB do DM-AM ao notebook</div>
+        <div class="fault-li"><strong style="color:var(--green)">2.</strong> Conecte os terminais Fieldbus (+, -, S) ao segmento PA</div>
+        <div class="fault-li"><strong style="color:var(--green)">3.</strong> Conecte a alimentação Power (DC 20-30V)</div>
+        <div class="fault-li"><strong style="color:var(--green)">4.</strong> LED PWR (verde) deve acender — hardware OK</div>
+        <div class="fault-li"><strong style="color:var(--green)">5.</strong> LED COM/ERR indica status de comunicação</div>
+        <div class="fault-li"><strong style="color:var(--green)">6.</strong> Abra o PACTware e inicialize o CommDTM</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">LEDs de Status</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.8">
+        <div class="lm-info-row"><span class="lm-info-label">🟢 PWR (verde)</span><span class="lm-info-value">Alimentação OK</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">🔴 COM/ERR (vermelho)</span><span class="lm-info-value">Erro de comunicação</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">🟢 COM/ERR (verde)</span><span class="lm-info-value">Comunicação ativa</span></div>
+        <div class="lm-info-row"><span class="lm-info-label">⚫ COM/ERR (apagado)</span><span class="lm-info-value">Sem atividade no bus</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:rgba(0,212,222,0.2)">
+      <div class="card-title" style="color:var(--cyan)">Software Compatível</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.8">
+        <div class="fault-li">PACTware 4.1 / 5.0 (FDT Framework)</div>
+        <div class="fault-li">FieldConnex Diagnostic Manager (DTM-FC.AD)</div>
+        <div class="fault-li">CommDTM Pepperl+Fuchs</div>
+        <div class="fault-li">Compatível com qualquer FDT Frame (FieldCare, etc.)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HISTÓRICO ══ -->
+  <div class="panel" id="p-historico">
+    <div class="sec-title">💾 Histórico de Análises</div>
+
+    <div class="card">
+      <div class="card-title">Salvar Análise Atual</div>
+      <div class="rpt-field">
+        <div class="rpt-label">Nome da Análise</div>
+        <input type="text" class="rpt-input" id="hist-name" placeholder="Ex: Segmento PA - Área 51 - Comissionamento" style="font-size:14px">
+      </div>
+      <div class="rpt-field">
+        <div class="rpt-label">Observações</div>
+        <textarea class="ia-input" id="hist-obs" placeholder="Notas adicionais..." style="min-height:60px;font-size:14px"></textarea>
+      </div>
+      <button class="rpt-btn" onclick="saveAnalysis()" style="margin-top:8px">💾 SALVAR ANÁLISE</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Análises Salvas</div>
+      <div id="hist-list" style="font-size:14px;color:var(--text2)">
+        <div style="text-align:center;padding:16px;color:var(--text3)">Nenhuma análise salva ainda.</div>
+      </div>
+    </div>
+
+    <button class="scope-btn" onclick="clearHistory()" style="font-size:12px;padding:6px 14px;margin-top:8px;color:var(--red);border-color:rgba(240,69,69,0.3)">🗑 Limpar Histórico</button>
+  </div>
+
+  <!-- ══ REPORT ══ -->
+  <div class="panel" id="p-report">
+    <div class="sec-title">📄 Relatório Técnico de Rede PROFIBUS PA</div>
+
+    <div class="card">
+      <div class="card-title">Informações Gerais</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="rpt-field" style="grid-column:1/3">
+          <div class="rpt-label">Nº do Protocolo / Ordem de Serviço</div>
+          <input type="text" class="rpt-input" id="rpt-protocolo" placeholder="Ex: OS-2026-0031 ou RT-PA-001" style="font-size:15px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Local / Planta</div>
+          <input type="text" class="rpt-input" id="rpt-local" placeholder="Ex: Usina São José" style="font-size:14px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Área / Setor</div>
+          <input type="text" class="rpt-input" id="rpt-area" placeholder="Ex: Área de Moagem" style="font-size:14px">
+        </div>
+        <div class="rpt-field" style="grid-column:1/3">
+          <div class="rpt-label">Identificação da Rede / Segmento</div>
+          <input type="text" class="rpt-input" id="rpt-rede" placeholder="Ex: Segmento PA-01 Instrumentação" style="font-size:14px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Tipo de Serviço</div>
+          <select class="scope-select" id="rpt-tipo" style="width:100%;font-size:14px;padding:8px">
+            <option value="Comissionamento">Comissionamento</option>
+            <option value="Manutenção Preventiva">Manutenção Preventiva</option>
+            <option value="Manutenção Corretiva">Manutenção Corretiva</option>
+            <option value="Diagnóstico / Troubleshooting" selected>Diagnóstico / Troubleshooting</option>
+            <option value="Auditoria de Rede">Auditoria de Rede</option>
+            <option value="Certificação de Segmento">Certificação de Segmento</option>
+          </select>
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Data</div>
+          <input type="date" class="rpt-input" id="rpt-data" style="font-size:14px">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Responsável Técnico</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="rpt-field">
+          <div class="rpt-label">Nome Completo</div>
+          <input type="text" class="rpt-input" id="rpt-eng" placeholder="Jamis Costa" style="font-size:14px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">CREA / CFT / Registro</div>
+          <input type="text" class="rpt-input" id="rpt-registro" placeholder="Ex: CFT Nº 12345" style="font-size:14px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Empresa</div>
+          <input type="text" class="rpt-input" id="rpt-empresa" placeholder="Nome da empresa" style="font-size:14px">
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Contato</div>
+          <input type="text" class="rpt-input" id="rpt-contato" placeholder="Telefone ou e-mail" style="font-size:14px">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Equipamento de Medição</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="rpt-field">
+          <div class="rpt-label">Interface</div>
+          <input type="text" class="rpt-input" id="rpt-hw" value="FieldConnex DM-AM (187225)" style="font-size:14px" readonly>
+        </div>
+        <div class="rpt-field">
+          <div class="rpt-label">Nº de Série (se disponível)</div>
+          <input type="text" class="rpt-input" id="rpt-hw-serial" placeholder="S/N do DM-AM" style="font-size:14px">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Seções do Relatório</div>
+      <div style="font-size:14px;color:var(--text2);line-height:2.2">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="rpt-sec-info" checked disabled> 📋 Informações Gerais (sempre incluso)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="rpt-sec-sem" checked> 🚦 Condição da Rede (Semáforo + Network Summary)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="rpt-sec-devices" checked> 📡 Tabela de Dispositivos</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="rpt-sec-sinais" checked> 📶 Níveis de Sinal por Dispositivo (mVpp, jitter)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="rpt-sec-bar" checked> 📊 Resumo BarLevel (estatísticas)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="rpt-sec-falhas"> ⚠ Falhas Detectadas</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="rpt-sec-calc"> 🧮 Cálculos do Segmento (corrente, cabo, tensão)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="rpt-sec-parecer" checked> ✍ Parecer Técnico</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✍ Parecer Técnico / Conclusão</div>
+      <textarea class="ia-input" id="rpt-parecer" placeholder="Descreva a condição geral da rede, problemas encontrados, ações realizadas e recomendações..." style="min-height:120px;font-size:14px;line-height:1.6"></textarea>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+        <button class="ia-chip" onclick="insertParecer('Rede em condições normais de operação. Todos os dispositivos comunicando dentro dos parâmetros especificados. Nenhuma ação corretiva necessária.')">✅ Rede OK</button>
+        <button class="ia-chip" onclick="insertParecer('Foram identificados pontos de atenção no segmento que requerem acompanhamento. Recomenda-se nova inspeção em 30 dias.')">⚠ Atenção</button>
+        <button class="ia-chip" onclick="insertParecer('Rede apresenta condição crítica. Ações corretivas imediatas são necessárias conforme detalhado neste relatório.')">🔴 Crítico</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button class="rpt-btn" onclick="generateReport()" style="flex:1;min-width:200px">📄 GERAR RELATÓRIO</button>
+    </div>
+
+    <div id="rpt-preview" style="margin-top:16px"></div>
+  </div>
+
+  <!-- ══ DESENVOLVEDOR ══ -->
+  <div class="panel" id="p-dev">
+    <div class="sec-title">👨‍💻 Desenvolvedor</div>
+
+    <div class="card" style="text-align:center;padding:24px;border-color:rgba(0,230,118,0.2)">
+      <img src="data:image/jpeg;base64,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" style="width:90px;height:90px;border-radius:50%;border:3px solid var(--green);margin:0 auto 12px;object-fit:cover;display:block;box-shadow:0 0 20px var(--green-glow)" alt="Jamis Costa">
+      <div style="font-size:20px;font-weight:700;color:var(--text)">Jamis Costa</div>
+      <div style="font-size:14px;color:var(--green);font-family:var(--mono);margin-top:4px">Técnico em Automação Industrial</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">Santa Helena de Goiás — GO</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Portfólio de Aplicações</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:24px;flex-shrink:0">⚡</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--green)">ProfiField</div>
+            <div style="font-size:12px;color:var(--text2)">Diagnóstico PROFIBUS PA — FieldConnex DM-AM</div>
+            <div style="font-size:11px;color:var(--cyan);font-family:var(--mono);margin-top:2px">ATUAL</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:24px;flex-shrink:0">🔧</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">PowerFlex Field Guide</div>
+            <div style="font-size:12px;color:var(--text2)">Inversores Allen-Bradley PF525/527/700/755/7000</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px">~4200 linhas • 120+ falhas • IA Gemini</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:24px;flex-shrink:0">🌡</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">TMFlex 2000 Field Guide</div>
+            <div style="font-size:12px;color:var(--text2)">Turbina a Vapor TGM — US Tropical</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px">~3500 linhas • Diagramas elétricos • Trip</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:24px;flex-shrink:0">🛡</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">E3/E300 Field Guide</div>
+            <div style="font-size:12px;color:var(--text2)">Relés de Sobrecarga Allen-Bradley</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px">~1200 linhas • SVG terminais • Calculadora</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:24px;flex-shrink:0">🔗</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">ASi Field Guide</div>
+            <div style="font-size:12px;color:var(--text2)">Gateways AS-Interface — ifm, P+F</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px">Diagnóstico ASi • 3 gateways • IA</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Tecnologias</div>
+      <div class="ia-presets">
+        <div class="ia-chip" style="cursor:default;color:var(--green);border-color:rgba(0,230,118,0.3)">PROFIBUS DP/PA</div>
+        <div class="ia-chip" style="cursor:default;color:var(--cyan);border-color:rgba(0,212,222,0.3)">HART</div>
+        <div class="ia-chip" style="cursor:default;color:var(--amber);border-color:rgba(240,165,0,0.3)">EtherNet/IP</div>
+        <div class="ia-chip" style="cursor:default;color:var(--blue);border-color:rgba(74,158,255,0.3)">AS-Interface</div>
+        <div class="ia-chip" style="cursor:default;color:var(--text2)">Allen-Bradley</div>
+        <div class="ia-chip" style="cursor:default;color:var(--text2)">Siemens</div>
+        <div class="ia-chip" style="cursor:default;color:var(--text2)">Instrumentação</div>
+        <div class="ia-chip" style="cursor:default;color:var(--text2)">PWA / HTML / JS</div>
+        <div class="ia-chip" style="cursor:default;color:var(--text2)">IA Generativa</div>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center;border-color:rgba(0,230,118,0.1)">
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text3);line-height:1.8">
+        ProfiField v1.0 — Março 2026<br>
+        Construído com Claude (Anthropic) + Gemini (Google)<br>
+        <span style="color:var(--green)">⚡ "Do barramento ao diagnóstico"</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL SOBRE -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)toggleModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="toggleModal()">✕</button>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:36px">⚡</div>
+      <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green);margin-top:8px">PROFIFIELD</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">Diagnóstico PROFIBUS PA v1.0</div>
+    </div>
+    <div style="font-size:14px;color:var(--text2);line-height:1.7">
+      Ferramenta de análise e diagnóstico para redes PROFIBUS PA. Inspirada no ProfiTrace (PROCENTEC), com interface moderna e diagnóstico assistido por IA.
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:13px;color:var(--green)">Hardware Compatível</div>
+      <div style="font-size:14px;color:var(--text2);margin-top:4px">Pepperl+Fuchs FieldConnex DM-AM (P/N 187225)</div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px">
+      <img src="data:image/jpeg;base64,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" style="width:50px;height:50px;border-radius:50%;border:2px solid var(--green);object-fit:cover;flex-shrink:0" alt="Jamis">
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--green)">Desenvolvido por</div>
+        <div style="font-size:15px;color:var(--text);font-weight:600">Jamis Costa</div>
+        <div style="font-size:13px;color:var(--text2)">Técnico em Automação Industrial</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  PROFIFIELD v1.0 — COMPLETO (Camadas 1-4)
+//  10 abas: LiveMap, Semáforo, ScopeView, BarLevel
+//  FalhasPA(15), IA Assist(Gemini), Produto, Histórico
+//  Report(PDF), Desenvolvedor(Jamis Costa)
+// ══════════════════════════════════════════
+
+// ── TAB NAVIGATION ──
+const tabs = document.querySelectorAll('.tab');
+const panels = document.querySelectorAll('.panel');
+tabs.forEach(t => {
+  t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('active'));
+    panels.forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('p-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+// ── MODAL ──
+function toggleModal() {
+  document.getElementById('modal').classList.toggle('show');
+}
+
+// ══════════════════════════════════════════
+//  LIVE MAP — Grade de endereços 0-126
+// ══════════════════════════════════════════
+
+// Simulated network state
+let networkState = {};
+const NODE_TYPES = {
+  EMPTY: 'lm-empty',
+  MASTER: 'lm-master',
+  SLAVE_IDLE: 'lm-slave-idle',
+  SLAVE_DX: 'lm-slave-dx',
+  SLAVE_PARAM_ERR: 'lm-slave-param-err',
+  SLAVE_CONFIG_ERR: 'lm-slave-config-err',
+  SLAVE_LOST: 'lm-slave-lost',
+  SLAVE_DIAG: 'lm-slave-diag'
+};
+
+const SAMPLE_DEVICES = {
+  1:  { type: NODE_TYPES.MASTER, name: 'PLC Master', ident: '—', status: 'Ativo', vendor: 'Siemens' },
+  3:  { type: NODE_TYPES.SLAVE_DX, name: 'Rosemount 3051', ident: '0x1518', status: 'Em troca', vendor: 'Emerson', tag: 'PT-1001' },
+  5:  { type: NODE_TYPES.SLAVE_DX, name: 'VEGAPULS 64', ident: '0x0845', status: 'Em troca', vendor: 'VEGA', tag: 'LT-1002' },
+  8:  { type: NODE_TYPES.SLAVE_DX, name: 'Endress TMP131', ident: '0x1560', status: 'Em troca', vendor: 'E+H', tag: 'TT-1003' },
+  11: { type: NODE_TYPES.SLAVE_DIAG, name: 'Fisher DVC6200', ident: '0x6034', status: 'Ext-Diag ativo', vendor: 'Emerson', tag: 'FV-1004' },
+  14: { type: NODE_TYPES.SLAVE_DX, name: 'ABB 266HSH', ident: '0x0B3A', status: 'Em troca', vendor: 'ABB', tag: 'PT-1005' },
+  16: { type: NODE_TYPES.SLAVE_PARAM_ERR, name: 'Yokogawa EJA', ident: '0x0800', status: 'Erro parametrização', vendor: 'Yokogawa', tag: 'FT-1006' },
+  19: { type: NODE_TYPES.SLAVE_DX, name: 'Siemens SITRANS P', ident: '0x0917', status: 'Em troca', vendor: 'Siemens', tag: 'PT-1007' },
+  22: { type: NODE_TYPES.SLAVE_CONFIG_ERR, name: 'Krohne OPTIFLUX', ident: '0xB750', status: 'Erro configuração', vendor: 'Krohne', tag: 'FT-1008' },
+  25: { type: NODE_TYPES.SLAVE_DX, name: 'Endress Promass 80', ident: '0x1523', status: 'Em troca', vendor: 'E+H', tag: 'FT-1009' },
+  31: { type: NODE_TYPES.SLAVE_LOST, name: 'Pepperl+Fuchs KFD2', ident: '0x0445', status: 'Perdido', vendor: 'P+F', tag: 'AI-1010' }
+};
+
+let currentGridFilter = 'all';
+let ctxAddr = null;
+let longPressTimer = null;
+
+function buildLiveMap() {
+  const grid = document.getElementById('livemap-grid');
+  grid.innerHTML = '';
+  
+  // Counters
+  let counts = { total: 0, master: 0, idle: 0, dx: 0, perr: 0, cerr: 0, lost: 0, diag: 0 };
+  
+  for (let addr = 0; addr < 127; addr++) {
+    const cell = document.createElement('div');
+    cell.className = 'lm-cell';
+    const dev = SAMPLE_DEVICES[addr];
+    
+    if (dev) {
+      cell.classList.add(dev.type);
+      counts.total++;
+      if (dev.type === NODE_TYPES.MASTER) { counts.master++; cell.textContent = addr; }
+      else if (dev.type === NODE_TYPES.SLAVE_DX) { counts.dx++; }
+      else if (dev.type === NODE_TYPES.SLAVE_IDLE) { counts.idle++; }
+      else if (dev.type === NODE_TYPES.SLAVE_PARAM_ERR) { counts.perr++; }
+      else if (dev.type === NODE_TYPES.SLAVE_CONFIG_ERR) { counts.cerr++; }
+      else if (dev.type === NODE_TYPES.SLAVE_LOST) { counts.lost++; }
+      else if (dev.type === NODE_TYPES.SLAVE_DIAG) { counts.diag++; }
+      
+      if (dev.type !== NODE_TYPES.MASTER) {
+        cell.textContent = dev.ident && dev.ident !== '—' ? dev.ident.replace('0x','') : addr;
+      }
+      
+      // Filter
+      if (currentGridFilter !== 'all') {
+        let show = false;
+        if (currentGridFilter === 'master' && dev.type === NODE_TYPES.MASTER) show = true;
+        if (currentGridFilter === 'slave-idle' && dev.type === NODE_TYPES.SLAVE_IDLE) show = true;
+        if (currentGridFilter === 'slave-dx' && dev.type === NODE_TYPES.SLAVE_DX) show = true;
+        if (currentGridFilter === 'param-err' && dev.type === NODE_TYPES.SLAVE_PARAM_ERR) show = true;
+        if (currentGridFilter === 'config-err' && dev.type === NODE_TYPES.SLAVE_CONFIG_ERR) show = true;
+        if (currentGridFilter === 'lost' && dev.type === NODE_TYPES.SLAVE_LOST) show = true;
+        if (currentGridFilter === 'diag' && dev.type === NODE_TYPES.SLAVE_DIAG) show = true;
+        if (!show) cell.style.opacity = '0.15';
+      }
+    } else {
+      cell.classList.add(NODE_TYPES.EMPTY);
+      cell.textContent = addr;
+      if (currentGridFilter !== 'all') cell.style.opacity = '0.08';
+    }
+    
+    // Left click: show info panel
+    cell.addEventListener('click', (e) => { e.preventDefault(); showNodeInfo(addr); });
+    
+    // Right click: context menu
+    cell.addEventListener('contextmenu', (e) => { e.preventDefault(); showCtxMenu(e, addr); });
+    
+    // Long press (mobile): context menu
+    cell.addEventListener('touchstart', (e) => {
+      longPressTimer = setTimeout(() => { e.preventDefault(); showCtxMenu(e.touches[0], addr); }, 500);
+    }, {passive: false});
+    cell.addEventListener('touchend', () => { clearTimeout(longPressTimer); });
+    cell.addEventListener('touchmove', () => { clearTimeout(longPressTimer); });
+    
+    grid.appendChild(cell);
+  }
+  
+  // Update legend counters
+  document.getElementById('leg-total').textContent = counts.total;
+  document.getElementById('leg-master').textContent = counts.master;
+  document.getElementById('leg-idle').textContent = counts.idle;
+  document.getElementById('leg-dx').textContent = counts.dx;
+  document.getElementById('leg-perr').textContent = counts.perr;
+  document.getElementById('leg-cerr').textContent = counts.cerr;
+  document.getElementById('leg-lost').textContent = counts.lost;
+  document.getElementById('leg-diag').textContent = counts.diag;
+}
+
+function filterGrid(filter) {
+  currentGridFilter = filter;
+  document.querySelectorAll('.lm-leg-chip').forEach(el => {
+    el.classList.toggle('active', el.dataset?.filter === filter);
+  });
+  buildLiveMap();
+}
+
+function showNodeInfo(addr) {
+  const dev = SAMPLE_DEVICES[addr];
+  const info = document.getElementById('lm-info');
+  const body = document.getElementById('lm-info-body');
+  document.getElementById('lm-info-addr').textContent = addr;
+
+  if (!dev) {
+    info.style.display = 'block';
+    body.innerHTML = '<div style="color:var(--text3);font-size:14px">Nenhuma estação detectada no endereço ' + addr + '</div>';
+    return;
+  }
+
+  info.style.display = 'block';
+  const sig = SIGNAL_DATA[addr];
+  const rows = [
+    ['Endereço', addr],
+    ['Tipo', dev.type === NODE_TYPES.MASTER ? '🔵 Mestre DP' : '📡 Escravo PA'],
+    ['Nome', dev.name],
+    ['Tag', dev.tag || '—'],
+    ['Ident Number', dev.ident],
+    ['Fabricante', dev.vendor],
+    ['Status', getStatusLabel(dev.type)]
+  ];
+  if (sig) {
+    rows.push(['Sinal', sig.amp + ' mVpp']);
+    rows.push(['Jitter', sig.jitter.toFixed(1) + ' μs']);
+    rows.push(['Tensão DC', sig.dc.toFixed(1) + ' V']);
+    rows.push(['Qualidade', sig.quality]);
+  }
+  body.innerHTML = rows.map(r =>
+    `<div class="lm-info-row"><span class="lm-info-label">${r[0]}</span><span class="lm-info-value">${r[1]}</span></div>`
+  ).join('');
+}
+
+function getStatusLabel(type) {
+  if (type.includes('master')) return '<span style="color:var(--blue)">🔵 Mestre ativo</span>';
+  if (type.includes('dx')) return '<span style="color:var(--green)">✅ Comunicando (Data Exchange)</span>';
+  if (type.includes('diag')) return '<span style="color:var(--amber)">⚠ Ext-Diag ativo — verificar periférico</span>';
+  if (type.includes('param')) return '<span style="color:var(--amber)">⛔ Erro de parametrização — GSD/Ident incompatível</span>';
+  if (type.includes('config')) return '<span style="color:var(--red)">⛔ Erro de configuração — módulo/bytes incorretos</span>';
+  if (type.includes('lost')) return '<span style="color:var(--red)">❌ Perdido — sem resposta do dispositivo</span>';
+  if (type.includes('idle')) return '<span style="color:var(--text2)">⏸ Escravo detectado (não ativo)</span>';
+  return '—';
+}
+
+// ── CONTEXT MENU ──
+function showCtxMenu(e, addr) {
+  ctxAddr = addr;
+  const dev = SAMPLE_DEVICES[addr];
+  const menu = document.getElementById('ctx-menu');
+  
+  // Position
+  const x = Math.min((e.clientX || e.pageX), window.innerWidth - 240);
+  const y = Math.min((e.clientY || e.pageY), window.innerHeight - 250);
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.style.display = 'block';
+  
+  // Title
+  document.getElementById('ctx-title').innerHTML = dev ?
+    `Nó #${addr} — ${dev.tag || dev.name}` :
+    `Nó #${addr} — Vazio`;
+  
+  // Status
+  document.getElementById('ctx-status').innerHTML = dev ?
+    getStatusLabel(dev.type) :
+    '<span style="color:var(--text3)">Nenhum dispositivo detectado</span>';
+  
+  // Show diag detail if has diag
+  document.getElementById('ctx-diag-detail').style.display = 
+    dev && (dev.type.includes('diag') || dev.type.includes('param') || dev.type.includes('config') || dev.type.includes('lost')) ? 'flex' : 'none';
+}
+
+function ctxAction(action) {
+  const addr = ctxAddr;
+  const dev = SAMPLE_DEVICES[addr];
+  hideCtxMenu();
+  
+  switch(action) {
+    case 'info':
+      showNodeInfo(addr);
+      break;
+    case 'scope':
+      // Switch to scope tab and select address
+      switchTab('scope');
+      const sel = document.getElementById('scope-addr');
+      if (sel) { for (let o of sel.options) { if (o.value == addr) { sel.value = addr; drawScope(); break; } } }
+      break;
+    case 'ia':
+      switchTab('ia');
+      const name = dev ? dev.name : 'dispositivo';
+      const tag = dev ? (dev.tag || '') : '';
+      const status = dev ? dev.status : 'desconhecido';
+      document.getElementById('ia-input').value = `Dispositivo ${name} (${tag}) no endereço ${addr} com status: ${status}. Como diagnosticar?`;
+      break;
+    case 'falhas':
+      switchTab('falhas');
+      break;
+    case 'diag':
+      showNodeInfo(addr);
+      // Scroll to info
+      document.getElementById('lm-info').scrollIntoView({behavior:'smooth'});
+      break;
+  }
+}
+
+function hideCtxMenu() {
+  document.getElementById('ctx-menu').style.display = 'none';
+}
+
+// Hide context menu on click anywhere
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#ctx-menu')) hideCtxMenu();
+});
+document.addEventListener('touchstart', (e) => {
+  if (!e.target.closest('#ctx-menu') && !e.target.closest('.lm-cell')) hideCtxMenu();
+});
+
+function simNetwork() {
+  // Randomize some states for demo
+  const addrs = Object.keys(SAMPLE_DEVICES).map(Number);
+  addrs.forEach(a => {
+    if (SAMPLE_DEVICES[a].type !== NODE_TYPES.MASTER) {
+      const r = Math.random();
+      if (r < 0.6) SAMPLE_DEVICES[a].type = NODE_TYPES.SLAVE_DX;
+      else if (r < 0.75) SAMPLE_DEVICES[a].type = NODE_TYPES.SLAVE_DIAG;
+      else if (r < 0.85) SAMPLE_DEVICES[a].type = NODE_TYPES.SLAVE_PARAM_ERR;
+      else if (r < 0.92) SAMPLE_DEVICES[a].type = NODE_TYPES.SLAVE_CONFIG_ERR;
+      else SAMPLE_DEVICES[a].type = NODE_TYPES.SLAVE_LOST;
+    }
+  });
+  buildLiveMap();
+  updateSemaforo();
+}
+
+// ══════════════════════════════════════════
+//  SEMÁFORO — Overview da rede (interativo)
+// ══════════════════════════════════════════
+
+let semTimers = { red: 0, amber: 0, green: 0 };
+let semStartTime = Date.now();
+let semCurrentState = 'green';
+let semTimerInterval = null;
+
+function updateSemaforo() {
+  const devs = Object.values(SAMPLE_DEVICES);
+  const slaves = devs.filter(d => d.type !== NODE_TYPES.MASTER);
+  const dx = slaves.filter(d => d.type === NODE_TYPES.SLAVE_DX).length;
+  const diag = slaves.filter(d => d.type === NODE_TYPES.SLAVE_DIAG).length;
+  const perr = slaves.filter(d => d.type === NODE_TYPES.SLAVE_PARAM_ERR).length;
+  const cerr = slaves.filter(d => d.type === NODE_TYPES.SLAVE_CONFIG_ERR).length;
+  const lost = slaves.filter(d => d.type === NODE_TYPES.SLAVE_LOST).length;
+  const retries = (perr + cerr) * 3 + lost * 12 + Math.floor(Math.random() * 5);
+
+  // Determine state
+  let state = 'green';
+  let details = [];
+  if (lost > 0 || cerr > 0) {
+    state = 'red';
+    if (lost > 0) details.push({ icon: '🔴', color: 'var(--red)', text: `${lost} dispositivo(s) perdido(s) — sem resposta`, action: 'lost' });
+    if (cerr > 0) details.push({ icon: '🔴', color: 'var(--red)', text: `${cerr} erro(s) de configuração — GSD/módulos incorretos`, action: 'config' });
+  }
+  if (perr > 0 || diag > 0) {
+    if (state !== 'red') state = 'amber';
+    if (diag > 0) details.push({ icon: '🟡', color: 'var(--amber)', text: `${diag} dispositivo(s) com diagnóstico estendido ativo`, action: 'diag' });
+    if (perr > 0) details.push({ icon: '🟡', color: 'var(--amber)', text: `${perr} erro(s) de parametrização — verificar ident/params`, action: 'param' });
+  }
+  if (retries > 10) {
+    if (state === 'green') state = 'amber';
+    details.push({ icon: '🟡', color: 'var(--amber)', text: `${retries} retries detectados — possível problema físico`, action: 'retries' });
+  }
+  if (state === 'green') {
+    details.push({ icon: '✅', color: 'var(--green)', text: 'Rede operando normalmente. Todos os dispositivos comunicando.', action: null });
+  }
+
+  // State change? Update timer tracking
+  if (state !== semCurrentState) {
+    semCurrentState = state;
+    semStartTime = Date.now();
+  }
+
+  // Update lights
+  document.getElementById('sem-r').className = 'sem-light sem-red ' + (state === 'red' ? 'on' : 'off');
+  document.getElementById('sem-a').className = 'sem-light sem-amber ' + (state === 'amber' ? 'on' : 'off');
+  document.getElementById('sem-g').className = 'sem-light sem-green ' + (state === 'green' ? 'on' : 'off');
+
+  // Update summary
+  document.getElementById('ns-slaves').textContent = slaves.length;
+  document.getElementById('ns-dx').textContent = dx;
+  document.getElementById('ns-perr').textContent = perr;
+  document.getElementById('ns-perr').className = 'ns-value' + (perr > 0 ? ' wn' : '');
+  document.getElementById('ns-cerr').textContent = cerr;
+  document.getElementById('ns-cerr').className = 'ns-value' + (cerr > 0 ? ' dn' : '');
+  document.getElementById('ns-lost').textContent = lost;
+  document.getElementById('ns-lost').className = 'ns-value' + (lost > 0 ? ' dn' : '');
+  document.getElementById('ns-retries').textContent = retries;
+  document.getElementById('ns-retries').className = 'ns-value' + (retries > 10 ? ' wn' : '');
+
+  // Update details (clicáveis!)
+  document.getElementById('sem-details').innerHTML = details.map(d =>
+    `<div style="padding:8px 10px;margin:4px 0;border-radius:6px;background:${d.color}15;border-left:3px solid ${d.color};color:var(--text2);font-size:14px;cursor:${d.action ? 'pointer' : 'default'};transition:.15s" 
+      ${d.action ? `onclick="semDetailAction('${d.action}')"` : ''}>
+      <span style="margin-right:6px">${d.icon}</span>${d.text}
+      ${d.action ? '<span style="float:right;color:var(--text3);font-size:12px">toque para ver ▶</span>' : ''}
+    </div>`
+  ).join('');
+
+  // Start timer if not running
+  if (!semTimerInterval) {
+    semTimerInterval = setInterval(updateSemTimers, 1000);
+  }
+
+  // Update scope select with current devices
+  updateScopeSelect();
+}
+
+function updateSemTimers() {
+  const elapsed = Math.floor((Date.now() - semStartTime) / 1000);
+  const totalSec = semTimers.red + semTimers.amber + semTimers.green + elapsed;
+  
+  // Current state gets elapsed time added
+  const times = {
+    red: semTimers.red + (semCurrentState === 'red' ? elapsed : 0),
+    amber: semTimers.amber + (semCurrentState === 'amber' ? elapsed : 0),
+    green: semTimers.green + (semCurrentState === 'green' ? elapsed : 0)
+  };
+  
+  const fmt = s => { const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const sec = s%60; return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; };
+  const pct = s => totalSec > 0 ? (s / totalSec * 100).toFixed(1) + '%' : '0.0%';
+  
+  document.getElementById('sem-t-r').textContent = fmt(times.red);
+  document.getElementById('sem-t-a').textContent = fmt(times.amber);
+  document.getElementById('sem-t-g').textContent = fmt(times.green);
+  document.getElementById('sem-p-r').textContent = pct(times.red);
+  document.getElementById('sem-p-a').textContent = pct(times.amber);
+  document.getElementById('sem-p-g').textContent = pct(times.green);
+}
+
+function semDetailAction(action) {
+  switch(action) {
+    case 'lost':
+      switchTab('livemap');
+      filterGrid('lost');
+      break;
+    case 'config':
+      switchTab('livemap');
+      filterGrid('config-err');
+      break;
+    case 'param':
+      switchTab('livemap');
+      filterGrid('param-err');
+      break;
+    case 'diag':
+      switchTab('livemap');
+      filterGrid('diag');
+      break;
+    case 'retries':
+      switchTab('falhas');
+      break;
+  }
+}
+
+function updateScopeSelect() {
+  const sel = document.getElementById('scope-addr');
+  const currentVal = sel.value;
+  sel.innerHTML = '';
+  Object.entries(SAMPLE_DEVICES).forEach(([addr, d]) => {
+    if (d.type === NODE_TYPES.MASTER) return;
+    const opt = document.createElement('option');
+    opt.value = addr;
+    opt.textContent = `${addr} — ${d.tag || d.name}`;
+    sel.appendChild(opt);
+  });
+  // Restore selection if still exists
+  if (sel.querySelector(`option[value="${currentVal}"]`)) {
+    sel.value = currentVal;
+  }
+}
+
+// ══════════════════════════════════════════
+//  SCOPE VIEW — Osciloscópio PROFIBUS PA
+//  Camada 2
+// ══════════════════════════════════════════
+
+let scopeFreeze = false;
+let scopeAnimId = null;
+
+// Simulated signal data per address
+const SIGNAL_DATA = {
+  3:  { amp: 850, noise: 15, jitter: 0.5, dc: 24.2, quality: 'Bom' },
+  5:  { amp: 920, noise: 10, jitter: 0.4, dc: 23.8, quality: 'Excelente' },
+  8:  { amp: 780, noise: 25, jitter: 0.8, dc: 22.1, quality: 'Bom' },
+  11: { amp: 650, noise: 40, jitter: 1.2, dc: 21.5, quality: 'Marginal' },
+  14: { amp: 890, noise: 12, jitter: 0.5, dc: 24.0, quality: 'Excelente' },
+  16: { amp: 420, noise: 55, jitter: 1.8, dc: 19.3, quality: 'Crítico' },
+  19: { amp: 870, noise: 18, jitter: 0.6, dc: 23.5, quality: 'Bom' },
+  22: { amp: 380, noise: 60, jitter: 2.1, dc: 18.8, quality: 'Crítico' },
+  25: { amp: 910, noise: 8, jitter: 0.3, dc: 24.5, quality: 'Excelente' }
+};
+
+function drawScope() {
+  if (scopeFreeze) return;
+  const canvas = document.getElementById('scope-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const addr = parseInt(document.getElementById('scope-addr').value);
+  const mode = document.getElementById('scope-mode').value;
+  const vdiv = parseFloat(document.getElementById('scope-vdiv').value);
+  const sig = SIGNAL_DATA[addr] || { amp: 800, noise: 20, jitter: 0.5, dc: 23, quality: 'N/A' };
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = '#060a08';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,230,118,0.08)';
+  ctx.lineWidth = 0.5;
+  const gridX = W / 10;
+  const gridY = H / 8;
+  for (let i = 1; i < 10; i++) {
+    ctx.beginPath(); ctx.moveTo(i * gridX, 0); ctx.lineTo(i * gridX, H); ctx.stroke();
+  }
+  for (let i = 1; i < 8; i++) {
+    ctx.beginPath(); ctx.moveTo(0, i * gridY); ctx.lineTo(W, i * gridY); ctx.stroke();
+  }
+
+  // Center line
+  ctx.strokeStyle = 'rgba(0,230,118,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+
+  // Voltage labels
+  ctx.fillStyle = 'rgba(0,230,118,0.4)';
+  ctx.font = '11px IBM Plex Mono';
+  const maxV = vdiv * 4;
+  for (let i = 0; i <= 8; i++) {
+    const v = (maxV - (i * vdiv)).toFixed(1);
+    ctx.fillText(v + 'V', 4, i * gridY + 10);
+  }
+
+  // Draw PROFIBUS PA waveform (simulated Manchester/NRZ-like)
+  const ampPx = (sig.amp / 1000) / vdiv * gridY;
+  const noisePx = (sig.noise / 1000) / vdiv * gridY;
+  const midY = H / 2;
+  const t = Date.now() * 0.001;
+
+  if (mode === 'badiff') {
+    // B-A Differential
+    ctx.strokeStyle = '#00E676';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = 'rgba(0,230,118,0.3)';
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    for (let x = 0; x < W; x++) {
+      const phase = (x / W) * 20 + t;
+      // Simulate PROFIBUS Manchester-like signal
+      const bit = Math.sign(Math.sin(phase * Math.PI));
+      const transition = Math.tanh((Math.sin(phase * Math.PI)) * 3);
+      const noise = (Math.random() - 0.5) * noisePx * 2;
+      // Add reflection/ringing on transitions
+      const ringing = Math.sin(phase * Math.PI * 8) * noisePx * 0.5 * Math.exp(-((x % (W/20)) / (W/20)) * 3);
+      const y = midY - (transition * ampPx) - noise - ringing;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  } else {
+    // A & B separate
+    // Signal B (top)
+    ctx.strokeStyle = '#00E676';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let x = 0; x < W; x++) {
+      const phase = (x / W) * 20 + t;
+      const transition = Math.tanh(Math.sin(phase * Math.PI) * 3);
+      const noise = (Math.random() - 0.5) * noisePx;
+      const baseV = 2.5; // DC offset for B
+      const y = H * 0.25 - (transition * ampPx * 0.5) - noise;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Signal A (bottom)
+    ctx.strokeStyle = '#f0a500';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let x = 0; x < W; x++) {
+      const phase = (x / W) * 20 + t;
+      const transition = Math.tanh(Math.sin(phase * Math.PI) * 3);
+      const noise = (Math.random() - 0.5) * noisePx;
+      const y = H * 0.75 + (transition * ampPx * 0.5) - noise;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Labels
+    ctx.fillStyle = '#00E676';
+    ctx.font = 'bold 12px IBM Plex Mono';
+    ctx.fillText('B', W - 20, H * 0.25 - 10);
+    ctx.fillStyle = '#f0a500';
+    ctx.fillText('A', W - 20, H * 0.75 - 10);
+  }
+
+  // Update info
+  document.getElementById('scope-amp').textContent = sig.amp + ' mVpp';
+  document.getElementById('scope-freq').textContent = '45.45 kbps';
+  const qEl = document.getElementById('scope-qual');
+  qEl.textContent = sig.quality;
+  qEl.className = 'ns-value ' + (sig.quality === 'Excelente' || sig.quality === 'Bom' ? 'ok' : sig.quality === 'Marginal' ? 'wn' : 'dn');
+
+  // Info overlay
+  document.getElementById('scope-info-line').textContent =
+    `Addr: ${addr} | ${sig.amp}mVpp | DC: ${sig.dc}V | Jitter: ${sig.jitter}μs | Mode: ${mode === 'badiff' ? 'B-A Diff' : 'A&B'}`;
+
+  // Animate
+  if (!scopeFreeze) {
+    scopeAnimId = requestAnimationFrame(drawScope);
+  }
+}
+
+// Start/stop scope when tab changes
+function startScope() { if (!scopeAnimId) drawScope(); }
+function stopScope() { if (scopeAnimId) { cancelAnimationFrame(scopeAnimId); scopeAnimId = null; } }
+
+// ══════════════════════════════════════════
+//  BARLEVEL — Bargraph de amplitude
+//  Camada 2
+// ══════════════════════════════════════════
+
+function drawBargraph() {
+  const canvas = document.getElementById('bar-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const mode = document.getElementById('bar-mode').value;
+  const sortMode = document.getElementById('bar-sort').value;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#060a08';
+  ctx.fillRect(0, 0, W, H);
+
+  // Get device data
+  let devices = Object.entries(SIGNAL_DATA).map(([addr, d]) => {
+    let val, maxRef, unit, refLine;
+    if (mode === 'diff' || mode === 'stable') {
+      // DP mode - volts (simulated higher values)
+      val = (d.amp / 1000) * (3 + Math.random() * 4); // 2-7V range
+      if (mode === 'stable') val *= (1 - d.noise / 200);
+      maxRef = 9; refLine = 2.5; unit = 'V';
+    } else if (mode === 'pa-level') {
+      val = d.amp + (Math.random() - 0.5) * 40;
+      maxRef = 1200; refLine = 750; unit = 'mV';
+    } else {
+      // PA Jitter
+      val = d.jitter + (Math.random() - 0.5) * 0.3;
+      maxRef = 5; refLine = 2; unit = 'μs';
+    }
+    return { addr: parseInt(addr), val, maxRef, unit, refLine, name: SAMPLE_DEVICES[addr]?.name || 'Device' };
+  });
+
+  // Sort
+  if (sortMode === 'high') devices.sort((a, b) => b.val - a.val);
+  else if (sortMode === 'low') devices.sort((a, b) => a.val - b.val);
+  else devices.sort((a, b) => a.addr - b.addr);
+
+  if (devices.length === 0) return;
+
+  const padL = 40, padR = 10, padT = 20, padB = 30;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const barW = Math.min(50, (chartW / devices.length) * 0.7);
+  const gap = (chartW - barW * devices.length) / (devices.length + 1);
+  const maxRef = devices[0].maxRef;
+  const refLine = devices[0].refLine;
+  const unit = devices[0].unit;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 5; i++) {
+    const y = padT + (chartH / 5) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '11px IBM Plex Mono';
+    const label = (maxRef - (maxRef / 5) * i).toFixed(mode === 'pa-jitter' ? 1 : 0);
+    ctx.fillText(label + unit, 2, y + 3);
+  }
+
+  // Reference line
+  const refY = padT + chartH * (1 - refLine / maxRef);
+  ctx.strokeStyle = 'rgba(240,69,69,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(padL, refY); ctx.lineTo(W - padR, refY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(240,69,69,0.6)';
+  ctx.font = '10px IBM Plex Mono';
+  ctx.fillText(refLine + unit, W - padR - 35, refY - 4);
+
+  // Bars
+  let vals = [];
+  devices.forEach((d, i) => {
+    const x = padL + gap + i * (barW + gap);
+    const barH = (d.val / maxRef) * chartH;
+    const y = padT + chartH - barH;
+
+    // Color
+    let isOk;
+    if (mode === 'pa-jitter') {
+      isOk = d.val < refLine;
+    } else {
+      isOk = d.val >= refLine;
+    }
+    const color = isOk ? '#00E676' : (d.val >= refLine * 0.6 || (mode === 'pa-jitter' && d.val < refLine * 1.5)) ? '#f0a500' : '#f04545';
+
+    // Gradient bar
+    const grad = ctx.createLinearGradient(x, y, x, padT + chartH);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, color + '44');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, barW, barH);
+
+    // Border
+    ctx.strokeStyle = color + '88';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, barW, barH);
+
+    // Value on top
+    ctx.fillStyle = color;
+    ctx.font = 'bold 10px IBM Plex Mono';
+    ctx.textAlign = 'center';
+    const valText = mode === 'pa-jitter' ? d.val.toFixed(1) : mode === 'pa-level' ? Math.round(d.val) : d.val.toFixed(2);
+    ctx.fillText(valText, x + barW / 2, y - 4);
+
+    // Address below
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px IBM Plex Mono';
+    ctx.fillText(d.addr, x + barW / 2, padT + chartH + 14);
+    ctx.textAlign = 'left';
+
+    vals.push(d.val);
+  });
+
+  // Update stats
+  if (vals.length > 0) {
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const fmt = mode === 'pa-jitter' ? 1 : mode === 'pa-level' ? 0 : 2;
+    document.getElementById('bar-min').textContent = min.toFixed(fmt) + ' ' + unit;
+    document.getElementById('bar-avg').textContent = avg.toFixed(fmt) + ' ' + unit;
+    document.getElementById('bar-max').textContent = max.toFixed(fmt) + ' ' + unit;
+  }
+
+  // Update reference info text
+  const refInfo = document.getElementById('bar-ref-info');
+  if (mode === 'diff' || mode === 'stable') {
+    refInfo.innerHTML = `
+      <div><span style="color:var(--green)">●</span> Acima de 2.5V — Sinal adequado (DP)</div>
+      <div><span style="color:var(--amber)">●</span> Entre 1.5-2.5V — Margem reduzida</div>
+      <div><span style="color:var(--red)">●</span> Abaixo de 1.5V — Nível crítico</div>
+      <div style="margin-top:6px;font-size:12px;color:var(--text2)">Modo: ${mode === 'diff' ? 'AB Differential Voltage (média)' : 'AB Diff Stable Voltage (região livre de perturbação)'}. Ref: 2.5V.</div>`;
+  } else if (mode === 'pa-level') {
+    refInfo.innerHTML = `
+      <div><span style="color:var(--green)">●</span> Acima de 750 mVpp — Sinal adequado (PA)</div>
+      <div><span style="color:var(--amber)">●</span> Entre 400-750 mVpp — Margem reduzida</div>
+      <div><span style="color:var(--red)">●</span> Abaixo de 400 mVpp — Nível crítico</div>
+      <div style="margin-top:6px;font-size:12px;color:var(--text2)">Faixa ideal PA: 750-1000 mVpp. Ref mínima: 750 mVpp.</div>`;
+  } else {
+    refInfo.innerHTML = `
+      <div><span style="color:var(--green)">●</span> Abaixo de 2.0 μs — Jitter aceitável</div>
+      <div><span style="color:var(--amber)">●</span> Entre 2.0-3.0 μs — Jitter elevado</div>
+      <div><span style="color:var(--red)">●</span> Acima de 3.0 μs — Jitter crítico</div>
+      <div style="margin-top:6px;font-size:12px;color:var(--text2)">Jitter = desvio temporal do sinal. Quanto menor, melhor a qualidade.</div>`;
+  }
+}
+
+// ══════════════════════════════════════════
+//  FALHAS PA — Banco de falhas PROFIBUS PA
+//  Camada 3
+// ══════════════════════════════════════════
+
+const PA_FAULTS = [
+  {
+    code: 'F01', name: 'Tensão do segmento abaixo do mínimo', cat: 'physical', sev: 'dn',
+    causes: ['Fonte do coupler/link DP/PA subdimensionada','Excesso de dispositivos no segmento','Cabo com resistência elevada (distância ou bitola)','Terminação incorreta ou ausente'],
+    actions: ['Medir tensão DC nos terminais do segmento (min. 9V, ideal 14-32V)','Verificar corrente total vs capacidade da fonte','Checar terminações ativas em ambas extremidades','Reduzir número de dispositivos ou usar fonte mais potente']
+  },
+  {
+    code: 'F02', name: 'Sinal PA abaixo de 750 mVpp', cat: 'physical', sev: 'dn',
+    causes: ['Atenuação excessiva por comprimento de cabo','Terminação incorreta ou duplicada','Emendas ou conexões com mau contato','Interferência eletromagnética próxima'],
+    actions: ['Medir amplitude com osciloscópio no ScopeView','Verificar se há apenas 2 terminações no segmento','Inspecionar conectores, prensa-cabos e bornes','Afastar cabos de fontes de EMI (inversores, motores)']
+  },
+  {
+    code: 'F03', name: 'Jitter elevado (> 2 μs)', cat: 'physical', sev: 'wn',
+    causes: ['Stubs (derivações) com comprimento excessivo (> 30m)','Reflexões por impedância descasada','Cabo não certificado para PROFIBUS PA','Presença de ruído no barramento'],
+    actions: ['Verificar comprimento dos spurs (máx 30m em PA)','Usar cabo tipo A certificado PROFIBUS','Conferir terminações e blindagem do cabo','Checar BarLevel para identificar nó com jitter']
+  },
+  {
+    code: 'F04', name: 'Slave Lost — dispositivo perdeu comunicação', cat: 'comm', sev: 'dn',
+    causes: ['Dispositivo desligado ou sem alimentação','Cabo rompido ou desconectado','Endereço do escravo alterado','Coupler/link DP/PA com falha'],
+    actions: ['Verificar LED do dispositivo (PWR e COM/ERR)','Medir continuidade do cabo até o dispositivo','Confirmar endereço via PACTware ou display local','Testar coupler com outro segmento conhecido']
+  },
+  {
+    code: 'F05', name: 'Erro de parametrização', cat: 'config', sev: 'wn',
+    causes: ['GSD incorreto ou desatualizado no mestre','Ident Number incompatível','Parâmetros do usuário inválidos','Versão de firmware incompatível'],
+    actions: ['Verificar Ident Number no Live Map vs GSD','Atualizar arquivo GSD no PACTware/DCS','Conferir parâmetros de usuário via DTM','Verificar revisão de firmware do dispositivo']
+  },
+  {
+    code: 'F06', name: 'Erro de configuração', cat: 'config', sev: 'dn',
+    causes: ['Módulo selecionado não corresponde ao físico','Quantidade de bytes de I/O incorreta','Configuração do slot/índice errada','GSD não reconhece módulo instalado'],
+    actions: ['Comparar configuração no DCS vs dispositivo real','Verificar módulos selecionados no GSD','Refazer configuração com DTM atualizado','Resetar dispositivo e reconfigurar']
+  },
+  {
+    code: 'F07', name: 'Ext-Diag ativo — diagnóstico extendido', cat: 'device', sev: 'wn',
+    causes: ['Falha no sensor (curto-circuito, circuito aberto)','Valor de medição fora da faixa','Manutenção necessária no dispositivo','Alarme de processo configurado atingido'],
+    actions: ['Ler diagnóstico estendido via Info Panel ou DTM','Verificar condição física do sensor/elemento','Checar faixa de medição configurada vs processo real','Verificar alarmes HH/LL no dispositivo']
+  },
+  {
+    code: 'F08', name: 'Retries excessivos em um nó', cat: 'comm', sev: 'wn',
+    causes: ['Sinal marginal no nó específico','Conector com mau contato intermitente','EMI afetando trecho do cabo','Dispositivo com falha intermitente no transceiver'],
+    actions: ['Verificar amplitude do sinal no ScopeView para o endereço','Inspecionar conector e prensa-cabo','Checar rota do cabo (proximidade de VFD/motor)','Comparar bargraph do nó vs demais da rede']
+  },
+  {
+    code: 'F09', name: 'Sync — mestre sem resposta do escravo', cat: 'comm', sev: 'dn',
+    causes: ['Escravo em fase de inicialização','Endereço duplicado na rede','Dispositivo em modo de proteção','Falha no transceiver PA do dispositivo'],
+    actions: ['Aguardar tempo de inicialização (pode levar 30s)','Verificar se há endereços duplicados no Live Map','Checar modo de operação via display/DTM','Substituir dispositivo para teste']
+  },
+  {
+    code: 'F10', name: 'Illegal Frame — mensagem corrompida', cat: 'comm', sev: 'dn',
+    causes: ['Interferência eletromagnética severa','Cabo danificado com blindagem rompida','Terminação ausente ou incorreta','Problema no transceiver do mestre ou escravo'],
+    actions: ['Verificar oscilografia no ScopeView (forma de onda distorcida)','Inspecionar integridade do cabo e blindagem','Conferir terminações ativas (2 por segmento)','Isolar trechos para encontrar a fonte do problema']
+  },
+  {
+    code: 'F11', name: 'Tensão DC acima de 32V', cat: 'physical', sev: 'wn',
+    causes: ['Fonte de alimentação mal configurada','Coupler com tensão de saída incorreta','Regulador de tensão com falha'],
+    actions: ['Medir tensão DC nos terminais do segmento','Verificar configuração do coupler/fonte','Ajustar tensão de saída para faixa 14-32V','Substituir fonte/coupler se necessário']
+  },
+  {
+    code: 'F12', name: 'Watchdog timeout — escravo não respondeu a tempo', cat: 'comm', sev: 'dn',
+    causes: ['Tempo de ciclo muito curto para quantidade de escravos','Dispositivo com processamento lento','Parâmetro watchdog muito agressivo','Rede sobrecarregada'],
+    actions: ['Verificar tempo de ciclo da rede (Data Exchange interval)','Aumentar parâmetro Watchdog Time no mestre','Reduzir número de escravos ou otimizar configuração','Verificar estatísticas no Semáforo/Overview']
+  },
+  {
+    code: 'F13', name: 'Endereço duplicado na rede', cat: 'config', sev: 'dn',
+    causes: ['Dois dispositivos configurados com mesmo endereço','Dispositivo novo adicionado sem alterar endereço padrão','Erro de documentação/projeto'],
+    actions: ['Verificar Live Map — dois nós no mesmo endereço','Desconectar dispositivos um a um para identificar','Alterar endereço via DIP switch, display ou DTM','Atualizar documentação do projeto']
+  },
+  {
+    code: 'F14', name: 'Static Diag — dados não prontos', cat: 'device', sev: 'wn',
+    causes: ['Dispositivo em inicialização','Sensor ainda estabilizando medição','Módulo de I/O não configurado','Falha interna no processamento do dispositivo'],
+    actions: ['Aguardar estabilização (até 60s para alguns dispositivos)','Verificar se módulo está corretamente configurado','Ler diagnóstico via DTM/PACTware','Ciclar alimentação do dispositivo']
+  },
+  {
+    code: 'F15', name: 'Reflexões acentuadas na forma de onda', cat: 'physical', sev: 'wn',
+    causes: ['Falta de terminação em uma das extremidades','Spur com comprimento excessivo','Emenda ou derivação irregular no cabo','Conector tipo T com problema de contato'],
+    actions: ['Verificar oscilografia no ScopeView (overshoots visíveis)','Medir distância da reflexão via cursores (tempo × velocidade)','Conferir terminações em ambas extremidades','Inspecionar todas as derivações e emendas']
+  }
+];
+
+let currentFaultFilter = 'all';
+
+function renderFaults() {
+  const list = document.getElementById('fault-list');
+  const search = (document.getElementById('fault-search').value || '').toLowerCase();
+  const filtered = PA_FAULTS.filter(f => {
+    if (currentFaultFilter !== 'all' && f.cat !== currentFaultFilter) return false;
+    if (search && !f.name.toLowerCase().includes(search) && !f.code.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="card" style="text-align:center;padding:24px;color:var(--text3);font-size:14px">Nenhuma falha encontrada.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map((f, i) => `
+    <div class="fault-card" data-idx="${i}">
+      <div class="fault-hdr" onclick="toggleFault(this)">
+        <span class="fault-code ${f.sev}">${f.code}</span>
+        <span class="fault-name">${f.name}</span>
+        <span class="fault-arrow">▼</span>
+      </div>
+      <div class="fault-body">
+        <div class="fault-content">
+          <div class="fault-section">
+            <div class="fault-section-title">Possíveis Causas</div>
+            ${f.causes.map(c => `<div class="fault-li">${c}</div>`).join('')}
+          </div>
+          <div class="fault-section">
+            <div class="fault-section-title">Ações Recomendadas</div>
+            ${f.actions.map(a => `<div class="fault-li">${a}</div>`).join('')}
+          </div>
+          <div style="margin-top:12px">
+            <button class="scope-btn" onclick="askIAFault('${f.code}','${f.name.replace(/'/g,"\\'")}');switchTab('ia')" style="font-size:12px;padding:6px 14px;background:var(--green-bg);color:var(--green);border-color:rgba(0,230,118,0.3)">🤖 Diagnóstico IA para ${f.code}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleFault(hdr) {
+  const body = hdr.nextElementSibling;
+  const arrow = hdr.querySelector('.fault-arrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function filterFaults(cat, btn) {
+  currentFaultFilter = cat;
+  document.querySelectorAll('#p-falhas .scope-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFaults();
+}
+
+function searchFaults() { renderFaults(); }
+
+function askIAFault(code, name) {
+  document.getElementById('ia-input').value = `Falha ${code}: ${name}. Como diagnosticar e resolver este problema em uma rede PROFIBUS PA?`;
+}
+
+function switchTab(tab) {
+  tabs.forEach(x => x.classList.remove('active'));
+  panels.forEach(x => x.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('p-' + tab).classList.add('active');
+}
+
+// ══════════════════════════════════════════
+//  IA ASSIST — Diagnóstico com Gemini
+//  Camada 3
+// ══════════════════════════════════════════
+
+const AI_PROXY = 'https://powerflex-api-proxy.jamiscosta81.workers.dev';
+
+function setPreset(text) {
+  document.getElementById('ia-input').value = text;
+}
+
+async function sendIA() {
+  const input = document.getElementById('ia-input').value.trim();
+  if (!input) return;
+
+  const result = document.getElementById('ia-result');
+  const btn = document.getElementById('ia-send-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  result.innerHTML = '<div class="card" style="text-align:center;padding:20px;color:var(--text2);font-size:14px"><div class="splash-bar" style="width:200px;margin:0 auto"><div class="splash-bar-fill" style="animation-duration:8s"></div></div><div style="margin-top:10px">Consultando IA...</div></div>';
+
+  const sys = `Você é um especialista sênior em redes PROFIBUS PA e PROFIBUS DP, com 20 anos de experiência em campo.
+Você conhece profundamente: physical layer (RS-485, MBP), couplers DP/PA, links, terminações, topologia, diagnóstico com ProfiTrace/ProfiCore/FieldConnex DM-AM, PACTware, DTMs, GSD files.
+Equipamentos que conhece: Rosemount, VEGA, Endress+Hauser, ABB, Yokogawa, Siemens, Krohne, Fisher, Pepperl+Fuchs, Turck.
+Você está ao lado do técnico de campo, orientando com clareza.
+
+RESPONDA SEMPRE EM JSON com esta estrutura:
+{"titulo":"...","resumo":"...","severidade":"alta/media/baixa","passos":[{"titulo":"SEGURANÇA","conteudo":"..."},{"titulo":"LEITURA INICIAL","conteudo":"..."},{"titulo":"MEDIÇÃO ELÉTRICA","conteudo":"..."},{"titulo":"CABOS E CONEXÕES","conteudo":"..."},{"titulo":"PARÂMETROS","conteudo":"..."},{"titulo":"TESTE COMPONENTE","conteudo":"..."},{"titulo":"CORREÇÃO","conteudo":"..."},{"titulo":"VALIDAÇÃO","conteudo":"..."}],"dica_campo":"..."}
+
+Cite SEMPRE: instrumento de medição, borne/terminal exato, valor esperado vs valor de falha. Linguagem direta de campo, em português brasileiro.`;
+
+  try {
+    const res = await fetch(AI_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gemini-2.5-flash',
+        max_tokens: 3000,
+        system: sys,
+        messages: [{ role: 'user', content: input }]
+      })
+    });
+    const data = await res.json();
+    let txt = '';
+    if (data.content) txt = data.content.map(c => c.text || '').join('');
+    else if (data.candidates) txt = data.candidates[0]?.content?.parts?.[0]?.text || JSON.stringify(data);
+    else txt = JSON.stringify(data);
+
+    const parsed = extractJSON(txt);
+    if (parsed && parsed.passos) {
+      result.innerHTML = formatAIResponse(parsed);
+    } else {
+      result.innerHTML = `<div class="card"><div class="card-title">Resposta da IA</div><div style="font-size:13px;color:var(--text2);line-height:1.6">${txt.replace(/\n/g, '<br>')}</div></div>`;
+    }
+  } catch (e) {
+    result.innerHTML = `<div class="card" style="border-color:rgba(240,69,69,0.3)"><div class="card-title" style="color:var(--red)">⚠ Erro de Conexão</div><div style="font-size:13px;color:var(--text2)">Sem conexão com IA. Verifique sua internet.<br><code style="font-size:11px;color:var(--text3)">${e.message}</code></div></div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = '➤';
+}
+
+function extractJSON(t) {
+  try { return JSON.parse(t); } catch(e) {}
+  try {
+    const m = t.match(/\{[\s\S]*\}/);
+    if (m) {
+      let s = m[0];
+      try { return JSON.parse(s); } catch(e2) {
+        let o = 0, q = false;
+        for (let i = 0; i < s.length; i++) {
+          if (s[i] === '"' && (i === 0 || s[i-1] !== '\\')) q = !q;
+          if (!q) { if (s[i] === '{' || s[i] === '[') o++; if (s[i] === '}' || s[i] === ']') o--; }
+        }
+        if (q) s += '"';
+        while (o > 0) { s += '}'; o--; }
+        try { return JSON.parse(s); } catch(e3) {}
+      }
+    }
+  } catch(e) {}
+  return null;
+}
+
+function formatAIResponse(d) {
+  const sevColor = d.severidade === 'alta' ? 'var(--red)' : d.severidade === 'media' ? 'var(--amber)' : 'var(--green)';
+  const sevBg = d.severidade === 'alta' ? 'var(--red-bg)' : d.severidade === 'media' ? 'var(--amber-bg)' : 'var(--green-bg)';
+
+  let h = `<div class="card" style="border-color:${sevColor}33">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${sevColor};flex-shrink:0"></div>
+      <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${sevColor}">${d.titulo || 'Diagnóstico IA'}</div>
+    </div>
+    <div style="background:${sevBg};padding:10px 12px;border-radius:8px;font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px">
+      ${d.resumo || ''}
+    </div>`;
+
+  if (d.passos) {
+    d.passos.forEach((p, i) => {
+      const stepClass = i === 0 ? ' danger' : i === d.passos.length - 1 ? ' success' : '';
+      h += `<div class="ai-step${stepClass}">
+        <div class="ai-step-num">PASSO ${i + 1}</div>
+        <div class="ai-step-title">${p.titulo}</div>
+        <div class="ai-step-body">${p.conteudo}</div>
+      </div>`;
+    });
+  }
+
+  if (d.dica_campo) {
+    h += `<div style="background:var(--green-bg);padding:10px 12px;border-radius:8px;margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6">
+      <strong style="color:var(--green)">💡 Dica de campo:</strong> ${d.dica_campo}
+    </div>`;
+  }
+  h += '</div>';
+  return h;
+}
+
+// ══════════════════════════════════════════
+//  TAB CHANGE — start/stop scope animation
+// ══════════════════════════════════════════
+const origTabClick = tabs.forEach;
+tabs.forEach(t => {
+  const origListener = t.onclick;
+  t.addEventListener('click', () => {
+    if (t.dataset.tab === 'scope') { startScope(); }
+    else { stopScope(); }
+    if (t.dataset.tab === 'bargraph') { setTimeout(drawBargraph, 50); }
+  });
+});
+
+// ══════════════════════════════════════════
+//  HISTÓRICO — Salvar/Carregar análises
+//  Camada 4
+// ══════════════════════════════════════════
+
+function saveAnalysis() {
+  const name = document.getElementById('hist-name').value.trim();
+  if (!name) { alert('Digite um nome para a análise.'); return; }
+  const obs = document.getElementById('hist-obs').value.trim();
+  const analysis = {
+    id: Date.now(), name, obs,
+    date: new Date().toLocaleString('pt-BR'),
+    devices: Object.keys(SAMPLE_DEVICES).length,
+    semState: document.getElementById('sem-g').classList.contains('on') ? 'Verde' :
+              document.getElementById('sem-a').classList.contains('on') ? 'Amarelo' : 'Vermelho',
+    slaves: document.getElementById('ns-slaves').textContent,
+    errors: parseInt(document.getElementById('ns-perr').textContent||0) + parseInt(document.getElementById('ns-cerr').textContent||0),
+    lost: document.getElementById('ns-lost').textContent
+  };
+  let hist = JSON.parse(localStorage.getItem('profifield_hist') || '[]');
+  hist.unshift(analysis);
+  if (hist.length > 50) hist = hist.slice(0, 50);
+  localStorage.setItem('profifield_hist', JSON.stringify(hist));
+  document.getElementById('hist-name').value = '';
+  document.getElementById('hist-obs').value = '';
+  loadHistory();
+  alert('✅ Análise salva!');
+}
+
+function loadHistory() {
+  const hist = JSON.parse(localStorage.getItem('profifield_hist') || '[]');
+  const list = document.getElementById('hist-list');
+  if (hist.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:14px">Nenhuma análise salva.</div>';
+    return;
+  }
+  list.innerHTML = hist.map(h => {
+    const sc = h.semState === 'Verde' ? 'var(--green)' : h.semState === 'Amarelo' ? 'var(--amber)' : 'var(--red)';
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${sc}"></div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);flex:1">${h.name}</div>
+        <button onclick="deleteAnalysis(${h.id})" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">${h.date}</div>
+      <div style="display:flex;gap:12px;margin-top:6px;font-size:13px;color:var(--text2)">
+        <span>📡 ${h.slaves} escravos</span><span>⚠ ${h.errors} erros</span><span>❌ ${h.lost} perdidos</span><span style="color:${sc}">● ${h.semState}</span>
+      </div>
+      ${h.obs ? `<div style="font-size:12px;color:var(--text3);margin-top:6px;font-style:italic">"${h.obs}"</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function deleteAnalysis(id) {
+  let h = JSON.parse(localStorage.getItem('profifield_hist') || '[]');
+  localStorage.setItem('profifield_hist', JSON.stringify(h.filter(x => x.id !== id)));
+  loadHistory();
+}
+
+function clearHistory() {
+  if (confirm('Limpar todo o histórico?')) { localStorage.removeItem('profifield_hist'); loadHistory(); }
+}
+
+// ══════════════════════════════════════════
+//  REPORT — Relatório Técnico
+//  Camada 4
+// ══════════════════════════════════════════
+
+function insertParecer(txt) {
+  const el = document.getElementById('rpt-parecer');
+  el.value = el.value ? el.value + '\n' + txt : txt;
+}
+
+function generateReport() {
+  const V = id => document.getElementById(id)?.value || '—';
+  const C = id => document.getElementById(id)?.checked;
+  const protocolo = V('rpt-protocolo');
+  const local = V('rpt-local');
+  const area = V('rpt-area');
+  const rede = V('rpt-rede');
+  const tipo = document.getElementById('rpt-tipo')?.value || '—';
+  const dataStr = V('rpt-data') || new Date().toLocaleDateString('pt-BR');
+  const eng = V('rpt-eng');
+  const registro = V('rpt-registro');
+  const empresa = V('rpt-empresa');
+  const contato = V('rpt-contato');
+  const hwSerial = V('rpt-hw-serial');
+  const parecer = V('rpt-parecer');
+  const geradoEm = new Date().toLocaleString('pt-BR');
+  
+  const semState = document.getElementById('sem-g').classList.contains('on') ? 'VERDE' :
+                   document.getElementById('sem-a').classList.contains('on') ? 'AMARELO' : 'VERMELHO';
+  const semIcon = semState === 'VERDE' ? '🟢' : semState === 'AMARELO' ? '🟡' : '🔴';
+  const semDesc = semState === 'VERDE' ? 'Rede operando normalmente' : semState === 'AMARELO' ? 'Eventos de atenção detectados' : 'Condição crítica — ação necessária';
+  const semColor = semState === 'VERDE' ? '#00a852' : semState === 'AMARELO' ? '#d4930a' : '#d43030';
+
+  const td = 'padding:6px 8px;border:1px solid #ddd;font-size:12px;';
+  const th = td + 'background:#f5f5f5;font-weight:bold;';
+  const thG = 'padding:6px 8px;background:#00a852;color:white;font-size:12px;text-align:left;';
+
+  // ── Seção: Dispositivos ──
+  let devRows = '';
+  Object.entries(SAMPLE_DEVICES).forEach(([addr, d]) => {
+    const st = d.type.includes('dx') ? '✅ Comunicando' : d.type.includes('diag') ? '⚠ Ext-Diag' :
+               d.type.includes('param') ? '⛔ Erro Param.' : d.type.includes('config') ? '⛔ Erro Config.' :
+               d.type.includes('lost') ? '❌ Perdido' : d.type.includes('master') ? '🔵 Mestre' : '—';
+    const stColor = d.type.includes('dx') ? '#1a7a3a' : d.type.includes('diag') ? '#b87800' : 
+                    d.type.includes('lost') || d.type.includes('config') || d.type.includes('param') ? '#c02020' : '#333';
+    devRows += `<tr>
+      <td style="${td}">${addr}</td>
+      <td style="${td}">${d.tag || '—'}</td>
+      <td style="${td}">${d.name}</td>
+      <td style="${td}">${d.vendor}</td>
+      <td style="${td}">${d.ident}</td>
+      <td style="${td}color:${stColor};font-weight:600">${st}</td>
+    </tr>`;
+  });
+
+  // ── Seção: Sinais ──
+  let sigRows = '';
+  Object.entries(SIGNAL_DATA).forEach(([addr, s]) => {
+    const dev = SAMPLE_DEVICES[parseInt(addr)];
+    if (!dev) return;
+    const ampColor = s.amp >= 750 ? '#1a7a3a' : s.amp >= 500 ? '#b87800' : '#c02020';
+    const jitColor = s.jitter <= 1.0 ? '#1a7a3a' : s.jitter <= 2.0 ? '#b87800' : '#c02020';
+    sigRows += `<tr>
+      <td style="${td}">${addr}</td>
+      <td style="${td}">${dev.tag || dev.name}</td>
+      <td style="${td}color:${ampColor};font-weight:600">${Math.round(s.amp)} mVpp</td>
+      <td style="${td}color:${jitColor};font-weight:600">${s.jitter.toFixed(1)} μs</td>
+      <td style="${td}">${s.dc.toFixed(1)} V</td>
+      <td style="${td}color:${ampColor};font-weight:600">${s.quality}</td>
+    </tr>`;
+  });
+
+  // ── Seção: Falhas detectadas ──
+  let faultRows = '';
+  const activeDevices = Object.entries(SAMPLE_DEVICES).filter(([k,v]) => 
+    v.type.includes('param') || v.type.includes('config') || v.type.includes('lost') || v.type.includes('diag'));
+  activeDevices.forEach(([addr, d]) => {
+    faultRows += `<tr><td style="${td}">${addr}</td><td style="${td}">${d.tag || d.name}</td><td style="${td}color:#c02020;font-weight:600">${d.status || d.type.replace('lm-slave-','')}</td></tr>`;
+  });
+
+  // ── Seção: Cálculos ──
+  const calcConsume = document.getElementById('calc-consumo')?.textContent || '—';
+  const calcMargem = document.getElementById('calc-margem')?.textContent || '—';
+  const calcVdev = document.getElementById('calc-vdrop-vdev')?.textContent || '—';
+  const calcVdropVal = document.getElementById('calc-vdrop-drop')?.textContent || '—';
+
+  // ══ MONTAR HTML DO RELATÓRIO ══
+  let html = `<div style="background:white;color:#222;padding:32px;font-family:'Segoe UI',Arial,sans-serif;font-size:13px;line-height:1.6;max-width:800px;margin:0 auto">
+    <!-- CABEÇALHO -->
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #00a852;padding-bottom:16px;margin-bottom:20px">
+      <div>
+        <div style="font-size:24px;font-weight:800;color:#00a852;letter-spacing:1px">⚡ PROFIFIELD</div>
+        <div style="font-size:14px;font-weight:600;color:#333;margin-top:2px">Relatório Técnico — Rede PROFIBUS PA</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#888">
+        <div>Protocolo: <strong style="color:#333">${protocolo}</strong></div>
+        <div>${tipo}</div>
+        <div>Gerado: ${geradoEm}</div>
+      </div>
+    </div>
+
+    <!-- INFO GERAL -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr><td style="${th}width:30%">Local / Planta</td><td style="${td}">${local}</td><td style="${th}width:20%">Área / Setor</td><td style="${td}">${area}</td></tr>
+      <tr><td style="${th}">Rede / Segmento</td><td style="${td}" colspan="3">${rede}</td></tr>
+      <tr><td style="${th}">Tipo de Serviço</td><td style="${td}">${tipo}</td><td style="${th}">Data</td><td style="${td}">${dataStr}</td></tr>
+      <tr><td style="${th}">Responsável Técnico</td><td style="${td}">${eng}</td><td style="${th}">Registro</td><td style="${td}">${registro}</td></tr>
+      <tr><td style="${th}">Empresa</td><td style="${td}">${empresa}</td><td style="${th}">Contato</td><td style="${td}">${contato}</td></tr>
+      <tr><td style="${th}">Equipamento</td><td style="${td}">FieldConnex DM-AM (187225)</td><td style="${th}">S/N</td><td style="${td}">${hwSerial}</td></tr>
+    </table>`;
+
+  // ── SEMÁFORO ──
+  if (C('rpt-sec-sem')) {
+    html += `<div style="font-size:16px;font-weight:700;color:#00a852;margin:20px 0 10px;border-bottom:2px solid #eee;padding-bottom:4px">🚦 Condição da Rede</div>
+    <div style="display:flex;align-items:center;gap:16px;padding:14px;background:${semState==='VERDE'?'#e8f5e9':semState==='AMARELO'?'#fff8e1':'#fce4ec'};border-radius:8px;border:1px solid ${semColor}33;margin-bottom:16px">
+      <div style="font-size:36px">${semIcon}</div>
+      <div>
+        <div style="font-size:18px;font-weight:700;color:${semColor}">${semState}</div>
+        <div style="font-size:13px;color:#555">${semDesc}</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+      <tr><td style="${th}">Baud Rate</td><td style="${td}">45.45 kbps (PROFIBUS PA)</td><td style="${th}">Escravos Ativos</td><td style="${td}">${document.getElementById('ns-slaves').textContent}</td></tr>
+      <tr><td style="${th}">Erros Param.</td><td style="${td}">${document.getElementById('ns-perr').textContent}</td><td style="${th}">Erros Config.</td><td style="${td}">${document.getElementById('ns-cerr').textContent}</td></tr>
+      <tr><td style="${th}">Retries</td><td style="${td}">${document.getElementById('ns-retries').textContent}</td><td style="${th}">Slave Lost</td><td style="${td}">${document.getElementById('ns-lost').textContent}</td></tr>
+    </table>`;
+  }
+
+  // ── DISPOSITIVOS ──
+  if (C('rpt-sec-devices')) {
+    html += `<div style="font-size:16px;font-weight:700;color:#00a852;margin:20px 0 10px;border-bottom:2px solid #eee;padding-bottom:4px">📡 Dispositivos da Rede</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+      <tr><th style="${thG}">End.</th><th style="${thG}">Tag</th><th style="${thG}">Dispositivo</th><th style="${thG}">Fabricante</th><th style="${thG}">Ident Nº</th><th style="${thG}">Status</th></tr>
+      ${devRows}
+    </table>`;
+  }
+
+  // ── SINAIS ──
+  if (C('rpt-sec-sinais')) {
+    html += `<div style="font-size:16px;font-weight:700;color:#00a852;margin:20px 0 10px;border-bottom:2px solid #eee;padding-bottom:4px">📶 Níveis de Sinal por Dispositivo</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px">
+      <tr><th style="${thG}">End.</th><th style="${thG}">Tag</th><th style="${thG}">Sinal (mVpp)</th><th style="${thG}">Jitter (μs)</th><th style="${thG}">Tensão DC</th><th style="${thG}">Qualidade</th></tr>
+      ${sigRows}
+    </table>
+    <div style="font-size:10px;color:#999;margin-bottom:16px">Ref: Sinal PA ideal 750-1000 mVpp | Jitter aceitável &lt; 2.0 μs | Tensão mín. 9V</div>`;
+  }
+
+  // ── BARLEVEL STATS ──
+  if (C('rpt-sec-bar')) {
+    html += `<div style="font-size:16px;font-weight:700;color:#00a852;margin:20px 0 10px;border-bottom:2px solid #eee;padding-bottom:4px">📊 Resumo BarLevel</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+      <tr><td style="${th}">Sinal Mínimo</td><td style="${td}">${document.getElementById('bar-min').textContent}</td><td style="${th}">Sinal Médio</td><td style="${td}">${document.getElementById('bar-avg').textContent}</td><td style="${th}">Sinal Máximo</td><td style="${td}">${document.getElementById('bar-max').textContent}</td></tr>
+    </table>`;
+  }
+
+  // ── FALHAS ──
+  if (C('rpt-sec-falhas') && faultRows) {
+    html += `<div style="font-size:16px;font-weight:700;color:#c02020;margin:20px 0 10px;border-bottom:2px solid #eee;padding-bottom:4px">⚠ Falhas Detectadas</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+      <tr><th style="${thG}background:#c02020;">End.</th><th style="${thG}background:#c02020;">Tag/Device</th><th style="${thG}background:#c02020;">Condição</th></tr>
+      ${faultRows}
+    </table>`;
+  }
+
+  // ── CÁLCULOS ──
+  if (C('rpt-sec-calc')) {
+    html += `<div style="font-size:16px;font-weight:700;color:#00a852;margin:20px 0 10px;border-bottom:2px solid #eee;padding-bottom:4px">🧮 Cálculos do Segmento</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+      <tr><td style="${th}">Corrente Total</td><td style="${td}">${calcConsume}</td><td style="${th}">Margem</td><td style="${td}">${calcMargem}</td></tr>
+      <tr><td style="${th}">Queda de Tensão</td><td style="${td}">${calcVdropVal}</td><td style="${th}">Tensão no Device</td><td style="${td}">${calcVdev}</td></tr>
+    </table>`;
+  }
+
+  // ── PARECER TÉCNICO ──
+  if (C('rpt-sec-parecer') && parecer && parecer !== '—') {
+    html += `<div style="font-size:16px;font-weight:700;color:#00a852;margin:20px 0 10px;border-bottom:2px solid #eee;padding-bottom:4px">✍ Parecer Técnico</div>
+    <div style="background:#f8faf9;padding:16px;border-radius:8px;border:1px solid #ddd;font-size:13px;white-space:pre-wrap;line-height:1.7">${parecer}</div>`;
+  }
+
+  // ── ASSINATURAS ──
+  html += `<div style="margin-top:40px;display:flex;justify-content:space-between;border-top:2px solid #ccc;padding-top:20px">
+    <div style="width:45%">
+      <div style="font-size:11px;color:#888;margin-bottom:30px">Responsável Técnico</div>
+      <div style="border-top:1px solid #333;padding-top:6px">
+        <div style="font-size:13px;font-weight:700">${eng}</div>
+        <div style="font-size:11px;color:#666">${registro}</div>
+        <div style="font-size:11px;color:#666">${empresa}</div>
+      </div>
+    </div>
+    <div style="width:45%;text-align:right">
+      <div style="font-size:11px;color:#888;margin-bottom:30px">Cliente / Aprovação</div>
+      <div style="border-top:1px solid #333;padding-top:6px">
+        <div style="font-size:13px;font-weight:700">________________________</div>
+        <div style="font-size:11px;color:#666">Nome / Cargo</div>
+        <div style="font-size:11px;color:#666">Data: ____/____/________</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RODAPÉ -->
+  <div style="text-align:center;margin-top:24px;padding-top:12px;border-top:1px solid #eee;font-size:10px;color:#bbb">
+    Gerado por ProfiField v1.0 — Desenvolvido por Jamis Costa — Técnico em Automação Industrial<br>
+    ⚡ "Do barramento ao diagnóstico" — ${geradoEm}
+  </div>
+</div>`;
+
+  // ── EXIBIR PREVIEW ──
+  const preview = document.getElementById('rpt-preview');
+  preview.innerHTML = html;
+
+  // ── BOTÕES DE AÇÃO ──
+  const btnWrap = document.createElement('div');
+  btnWrap.style.cssText = 'display:flex;gap:8px;margin-top:12px;flex-wrap:wrap';
+
+  // Botão Imprimir / PDF
+  const btnPrint = document.createElement('button');
+  btnPrint.className = 'rpt-btn';
+  btnPrint.style.cssText = 'flex:1;min-width:180px;background:var(--green)';
+  btnPrint.textContent = '🖨 IMPRIMIR / SALVAR PDF';
+  btnPrint.onclick = () => printReport(html);
+
+  // Botão Salvar HTML
+  const btnHtml = document.createElement('button');
+  btnHtml.className = 'rpt-btn';
+  btnHtml.style.cssText = 'flex:1;min-width:180px;background:var(--bg3);color:var(--cyan);border:1px solid rgba(0,212,222,0.3)';
+  btnHtml.textContent = '💾 SALVAR HTML';
+  btnHtml.onclick = () => saveReportFile(html, 'html');
+
+  // Botão Salvar JSON (dados brutos)
+  const btnJson = document.createElement('button');
+  btnJson.className = 'rpt-btn';
+  btnJson.style.cssText = 'flex:1;min-width:180px;background:var(--bg3);color:var(--amber);border:1px solid rgba(240,165,0,0.3)';
+  btnJson.textContent = '📦 EXPORTAR JSON';
+  btnJson.onclick = () => exportReportJSON();
+
+  btnWrap.appendChild(btnPrint);
+  btnWrap.appendChild(btnHtml);
+  btnWrap.appendChild(btnJson);
+  preview.appendChild(btnWrap);
+}
+
+function printReport(html) {
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório ProfiField</title>
+    <style>body{margin:20px;font-family:'Segoe UI',Arial,sans-serif}table{page-break-inside:avoid;width:100%}
+    @media print{body{margin:10mm}@page{size:A4;margin:15mm}}</style></head><body>${html}</body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+function saveReportFile(html, type) {
+  const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório ProfiField</title>
+    <style>body{margin:20px;font-family:'Segoe UI',Arial,sans-serif}table{width:100%}</style></head><body>${html}</body></html>`;
+  const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  const proto = document.getElementById('rpt-protocolo').value || 'relatorio';
+  const dataStr = document.getElementById('rpt-data').value || new Date().toISOString().split('T')[0];
+  a.href = URL.createObjectURL(blob);
+  a.download = `ProfiField_${proto}_${dataStr}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportReportJSON() {
+  const reportData = {
+    versao: 'ProfiField v1.0',
+    gerado_em: new Date().toISOString(),
+    protocolo: document.getElementById('rpt-protocolo').value,
+    local: document.getElementById('rpt-local').value,
+    area: document.getElementById('rpt-area').value,
+    rede: document.getElementById('rpt-rede').value,
+    tipo_servico: document.getElementById('rpt-tipo').value,
+    data: document.getElementById('rpt-data').value,
+    responsavel: {
+      nome: document.getElementById('rpt-eng').value,
+      registro: document.getElementById('rpt-registro').value,
+      empresa: document.getElementById('rpt-empresa').value,
+      contato: document.getElementById('rpt-contato').value
+    },
+    equipamento: {
+      modelo: 'FieldConnex DM-AM',
+      part_number: '187225',
+      serial: document.getElementById('rpt-hw-serial').value
+    },
+    rede_status: {
+      condicao: document.getElementById('sem-g').classList.contains('on') ? 'verde' :
+                document.getElementById('sem-a').classList.contains('on') ? 'amarelo' : 'vermelho',
+      escravos: document.getElementById('ns-slaves').textContent,
+      erros_param: document.getElementById('ns-perr').textContent,
+      erros_config: document.getElementById('ns-cerr').textContent,
+      slave_lost: document.getElementById('ns-lost').textContent
+    },
+    dispositivos: Object.entries(SAMPLE_DEVICES).map(([addr, d]) => ({
+      endereco: parseInt(addr),
+      nome: d.name,
+      tag: d.tag,
+      fabricante: d.vendor,
+      ident: d.ident,
+      tipo: d.type,
+      status: d.status,
+      sinal: SIGNAL_DATA[parseInt(addr)] || null
+    })),
+    parecer: document.getElementById('rpt-parecer').value,
+    desenvolvedor: 'Jamis Costa — Técnico em Automação Industrial'
+  };
+
+  const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  const proto = document.getElementById('rpt-protocolo').value || 'dados';
+  const dataStr = document.getElementById('rpt-data').value || new Date().toISOString().split('T')[0];
+  a.href = URL.createObjectURL(blob);
+  a.download = `ProfiField_${proto}_${dataStr}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ══════════════════════════════════════════
+//  CALCULADORA PA — Segmento PROFIBUS PA
+//  Camada 6
+// ══════════════════════════════════════════
+
+// -- Calc 1: Corrente total --
+function calcCorrente() {
+  const fonteMa = parseFloat(document.getElementById('calc-fonte-ma').value) || 0;
+  const rows = document.querySelectorAll('#calc-dev-list .calc-dev-row');
+  let total = 0;
+  rows.forEach(r => {
+    const inp = r.querySelectorAll('input')[1];
+    total += parseFloat(inp?.value) || 0;
+  });
+
+  const margem = fonteMa - total;
+  const pct = fonteMa > 0 ? ((total / fonteMa) * 100).toFixed(1) : 0;
+
+  document.getElementById('calc-consumo').textContent = total + ' mA';
+  document.getElementById('calc-consumo').className = 'ns-value ' + (total > fonteMa ? 'dn' : total > fonteMa * 0.8 ? 'wn' : 'ok');
+  document.getElementById('calc-fonte-cap').textContent = fonteMa + ' mA';
+  document.getElementById('calc-margem').textContent = margem + ' mA';
+  document.getElementById('calc-margem').className = 'ns-value ' + (margem < 0 ? 'dn' : margem < fonteMa * 0.2 ? 'wn' : 'ok');
+
+  const sem = document.getElementById('calc-corrente-semaforo');
+  if (total > fonteMa) {
+    sem.style.background = 'var(--red-bg)'; sem.style.color = 'var(--red)';
+    sem.textContent = `🔴 SOBRECARGA! Consumo ${total}mA excede capacidade ${fonteMa}mA da fonte (${pct}%)`;
+  } else if (total > fonteMa * 0.85) {
+    sem.style.background = 'var(--amber-bg)'; sem.style.color = 'var(--amber)';
+    sem.textContent = `🟡 ATENÇÃO: Margem reduzida. ${pct}% da capacidade utilizada (restam ${margem}mA)`;
+  } else {
+    sem.style.background = 'var(--green-bg)'; sem.style.color = 'var(--green)';
+    sem.textContent = `🟢 OK: ${pct}% utilizado. Margem de ${margem}mA disponível`;
+  }
+}
+
+function addDevRow() {
+  const list = document.getElementById('calc-dev-list');
+  const n = list.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'calc-dev-row';
+  row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+  row.innerHTML = `<input type="text" class="rpt-input" placeholder="Tag" value="DEV-${1000+n}" style="flex:2;font-size:13px;padding:8px">
+    <input type="number" class="rpt-input" placeholder="mA" value="13" min="1" max="100" oninput="calcCorrente()" style="flex:1;font-size:13px;padding:8px">
+    <span style="font-size:12px;color:var(--text3);width:24px">mA</span>`;
+  list.appendChild(row);
+  calcCorrente();
+}
+
+function removeDevRow() {
+  const list = document.getElementById('calc-dev-list');
+  if (list.children.length > 1) {
+    list.removeChild(list.lastElementChild);
+    calcCorrente();
+  }
+}
+
+// -- Calc 2: Comprimento de cabo --
+const CABLE_SPECS = {
+  a: { trunk: 1900, spur: 30, name: 'Tipo A', ohm: 44 },
+  b: { trunk: 1200, spur: 30, name: 'Tipo B', ohm: 115 },
+  c: { trunk: 400,  spur: 30, name: 'Tipo C', ohm: 132 },
+  d: { trunk: 200,  spur: 30, name: 'Tipo D', ohm: 150 }
+};
+
+function calcCabo() {
+  const tipo = document.getElementById('calc-cabo-tipo').value;
+  const ndev = parseInt(document.getElementById('calc-cabo-devices').value) || 1;
+  const trunkAtual = parseFloat(document.getElementById('calc-cabo-trunk').value) || 0;
+  const spurMedio = parseFloat(document.getElementById('calc-cabo-spur').value) || 0;
+
+  const spec = CABLE_SPECS[tipo];
+  const spurMax = spec.spur;
+  // Trunk máximo diminui com spurs: trunk + (n × spur) ≤ limite total
+  const totalSpurs = ndev * Math.min(spurMedio, spurMax);
+  const trunkMax = Math.max(0, spec.trunk - totalSpurs);
+  const totalLen = trunkAtual + totalSpurs;
+  const margemTrunk = trunkMax - trunkAtual;
+
+  document.getElementById('calc-trunk-max').textContent = trunkMax + ' m';
+  document.getElementById('calc-spur-max').textContent = spurMax + ' m';
+  document.getElementById('calc-total-len').textContent = Math.round(totalLen) + ' m';
+  document.getElementById('calc-total-len').className = 'ns-value ' + (totalLen > spec.trunk ? 'dn' : 'info');
+  document.getElementById('calc-trunk-margem').textContent = Math.round(margemTrunk) + ' m';
+  document.getElementById('calc-trunk-margem').className = 'ns-value ' + (margemTrunk < 0 ? 'dn' : margemTrunk < 100 ? 'wn' : 'ok');
+
+  const sem = document.getElementById('calc-cabo-semaforo');
+  if (margemTrunk < 0) {
+    sem.style.background = 'var(--red-bg)'; sem.style.color = 'var(--red)';
+    sem.textContent = `🔴 COMPRIMENTO EXCEDIDO! Trunk ${trunkAtual}m + Spurs ${Math.round(totalSpurs)}m = ${Math.round(totalLen)}m > ${spec.trunk}m (${spec.name})`;
+  } else if (margemTrunk < 100) {
+    sem.style.background = 'var(--amber-bg)'; sem.style.color = 'var(--amber)';
+    sem.textContent = `🟡 MARGEM REDUZIDA: Restam apenas ${Math.round(margemTrunk)}m de trunk (${spec.name})`;
+  } else if (spurMedio > spurMax) {
+    sem.style.background = 'var(--amber-bg)'; sem.style.color = 'var(--amber)';
+    sem.textContent = `🟡 SPUR LONGO: ${spurMedio}m > máximo ${spurMax}m recomendado`;
+  } else {
+    sem.style.background = 'var(--green-bg)'; sem.style.color = 'var(--green)';
+    sem.textContent = `🟢 OK: Margem de ${Math.round(margemTrunk)}m no trunk. Cable ${spec.name} adequado.`;
+  }
+}
+
+// -- Calc 3: Máximo de devices --
+function calcMaxDevices() {
+  const fonteMa = parseFloat(document.getElementById('calc-max-fonte').value) || 0;
+  const iDev = parseFloat(document.getElementById('calc-max-idev').value) || 13;
+  const prot = document.getElementById('calc-max-prot').value;
+  const plan = parseInt(document.getElementById('calc-max-plan').value) || 0;
+
+  const maxByI = Math.floor(fonteMa / iDev);
+  const maxByP = { fisco: 10, entity: 6, hpt: 32, none: 32 }[prot] || 32;
+  const maxReal = Math.min(maxByI, maxByP);
+
+  document.getElementById('calc-max-byI').textContent = maxByI;
+  document.getElementById('calc-max-byP').textContent = maxByP;
+  document.getElementById('calc-max-real').textContent = maxReal;
+  document.getElementById('calc-max-real').className = 'ns-value ' + (plan > maxReal ? 'dn' : plan > maxReal * 0.85 ? 'wn' : 'ok');
+
+  const sem = document.getElementById('calc-max-semaforo');
+  if (plan > maxReal) {
+    sem.style.background = 'var(--red-bg)'; sem.style.color = 'var(--red)';
+    sem.textContent = `🔴 EXCEDE! Planejados ${plan} > máximo ${maxReal} (${prot.toUpperCase()}: ${maxByP} | Corrente: ${maxByI})`;
+  } else if (plan > maxReal * 0.85) {
+    sem.style.background = 'var(--amber-bg)'; sem.style.color = 'var(--amber)';
+    sem.textContent = `🟡 QUASE NO LIMITE: ${plan} de ${maxReal} (${Math.round(plan/maxReal*100)}% utilizado)`;
+  } else {
+    sem.style.background = 'var(--green-bg)'; sem.style.color = 'var(--green)';
+    sem.textContent = `🟢 OK: ${plan} de ${maxReal} dispositivos (restam ${maxReal - plan} vagas)`;
+  }
+}
+
+// -- Calc 4: Queda de tensão --
+function calcVdrop() {
+  const vFonte = parseFloat(document.getElementById('calc-vdrop-fonte').value) || 24;
+  const iTotal = parseFloat(document.getElementById('calc-vdrop-i').value) || 0;
+  const len = parseFloat(document.getElementById('calc-vdrop-len').value) || 0;
+  const rCabo = parseFloat(document.getElementById('calc-vdrop-r').value) || 44;
+
+  // V_drop = I × R × L (ida e volta) / 1000
+  // R em Ω/km, I em mA, L em m → V_drop = (I/1000) × (R) × (L/1000) × 2
+  // Simplificado: V_drop = I × R × L × 2 / 1000000
+  const vDrop = (iTotal * rCabo * len * 2) / 1000000;
+  const vDevice = vFonte - vDrop;
+  const vMin = 9; // Mínimo para PA
+
+  document.getElementById('calc-vdrop-drop').textContent = vDrop.toFixed(2) + ' V';
+  document.getElementById('calc-vdrop-vdev').textContent = vDevice.toFixed(1) + ' V';
+  document.getElementById('calc-vdrop-vdev').className = 'ns-value ' + (vDevice < vMin ? 'dn' : vDevice < 14 ? 'wn' : 'ok');
+
+  const sem = document.getElementById('calc-vdrop-semaforo');
+  if (vDevice < vMin) {
+    sem.style.background = 'var(--red-bg)'; sem.style.color = 'var(--red)';
+    sem.textContent = `🔴 TENSÃO INSUFICIENTE! ${vDevice.toFixed(1)}V < ${vMin}V mínimo. Queda de ${vDrop.toFixed(2)}V no cabo.`;
+  } else if (vDevice < 14) {
+    sem.style.background = 'var(--amber-bg)'; sem.style.color = 'var(--amber)';
+    sem.textContent = `🟡 MARGEM BAIXA: ${vDevice.toFixed(1)}V no device. Recomendado >14V para confiabilidade.`;
+  } else {
+    sem.style.background = 'var(--green-bg)'; sem.style.color = 'var(--green)';
+    sem.textContent = `🟢 OK: ${vDevice.toFixed(1)}V no device mais distante. Queda de ${vDrop.toFixed(2)}V no cabo.`;
+  }
+}
+
+// ══════════════════════════════════════════
+//  SIMULADOR DE TESTE — Cenários PA
+// ══════════════════════════════════════════
+
+function toggleSimPanel() {
+  const body = document.getElementById('sim-body');
+  const btn = document.getElementById('sim-toggle');
+  if (body.style.display === 'none') { body.style.display = 'block'; btn.textContent = '▲'; }
+  else { body.style.display = 'none'; btn.textContent = '▼'; }
+}
+
+const DEVICE_CATALOG = [
+  { name: 'Rosemount 3051S', vendor: 'Emerson', ident: '0x1518', prefix: 'PT' },
+  { name: 'VEGAPULS 64', vendor: 'VEGA', ident: '0x0845', prefix: 'LT' },
+  { name: 'Endress TMP131', vendor: 'E+H', ident: '0x1560', prefix: 'TT' },
+  { name: 'Fisher DVC6200', vendor: 'Emerson', ident: '0x6034', prefix: 'FV' },
+  { name: 'ABB 266HSH', vendor: 'ABB', ident: '0x0B3A', prefix: 'PT' },
+  { name: 'Yokogawa EJA530', vendor: 'Yokogawa', ident: '0x0800', prefix: 'FT' },
+  { name: 'Siemens SITRANS P', vendor: 'Siemens', ident: '0x0917', prefix: 'PT' },
+  { name: 'Krohne OPTIFLUX', vendor: 'Krohne', ident: '0xB750', prefix: 'FT' },
+  { name: 'Endress Promass 80', vendor: 'E+H', ident: '0x1523', prefix: 'FT' },
+  { name: 'Rosemount 3144P', vendor: 'Emerson', ident: '0x1534', prefix: 'TT' },
+  { name: 'VEGA VEGABAR 82', vendor: 'VEGA', ident: '0x0851', prefix: 'PT' },
+  { name: 'ABB FSM4000', vendor: 'ABB', ident: '0x0B45', prefix: 'FT' },
+  { name: 'Siemens SITRANS F M', vendor: 'Siemens', ident: '0x0923', prefix: 'FT' },
+  { name: 'E+H Liquiphant FTL51', vendor: 'E+H', ident: '0x1570', prefix: 'LSH' },
+  { name: 'Pepperl+Fuchs KFD2', vendor: 'P+F', ident: '0x0445', prefix: 'AI' },
+  { name: 'Turck IMX12-DI', vendor: 'Turck', ident: '0x0667', prefix: 'DI' },
+  { name: 'Yokogawa DPharp EJA', vendor: 'Yokogawa', ident: '0x0812', prefix: 'PDT' },
+  { name: 'Rosemount 8800D', vendor: 'Emerson', ident: '0x1545', prefix: 'FT' },
+  { name: 'E+H Cerabar PMP71', vendor: 'E+H', ident: '0x1580', prefix: 'PT' },
+  { name: 'ABB TTF300', vendor: 'ABB', ident: '0x0B58', prefix: 'TT' },
+  { name: 'Krohne OPTIMASS 6400', vendor: 'Krohne', ident: '0xB760', prefix: 'FT' },
+  { name: 'Fisher FIELDVUE DVC2000', vendor: 'Emerson', ident: '0x6040', prefix: 'FV' },
+  { name: 'Siemens SITRANS LR250', vendor: 'Siemens', ident: '0x0930', prefix: 'LT' },
+  { name: 'VEGA VEGAFLEX 86', vendor: 'VEGA', ident: '0x0860', prefix: 'LT' },
+  { name: 'E+H Micropilot FMR62', vendor: 'E+H', ident: '0x1592', prefix: 'LT' },
+];
+
+function simCenario(tipo) {
+  // Limpar devices e sinais
+  Object.keys(SAMPLE_DEVICES).forEach(k => delete SAMPLE_DEVICES[k]);
+  Object.keys(SIGNAL_DATA).forEach(k => delete SIGNAL_DATA[k]);
+
+  const log = document.getElementById('sim-log');
+  const R = (min, max) => min + Math.random() * (max - min);
+  const RI = (min, max) => Math.floor(R(min, max));
+  let nDev, addrs, configs;
+
+  // Mestre sempre no endereço 1
+  SAMPLE_DEVICES[1] = { type: NODE_TYPES.MASTER, name: 'PLC Master', ident: '—', status: 'Ativo', vendor: 'Siemens', tag: '—' };
+
+  switch(tipo) {
+    case 'saudavel':
+      nDev = 10;
+      configs = { dxPct: 1.0, diagPct: 0, paramPct: 0, configPct: 0, lostPct: 0, sigMin: 800, sigMax: 1000, jitMin: 0.2, jitMax: 0.8, dcMin: 22, dcMax: 25 };
+      break;
+    case 'degradada':
+      nDev = 12;
+      configs = { dxPct: 0.6, diagPct: 0.2, paramPct: 0.1, configPct: 0.05, lostPct: 0.05, sigMin: 500, sigMax: 950, jitMin: 0.4, jitMax: 1.8, dcMin: 18, dcMax: 24 };
+      break;
+    case 'critica':
+      nDev = 8;
+      configs = { dxPct: 0.3, diagPct: 0.15, paramPct: 0.15, configPct: 0.15, lostPct: 0.25, sigMin: 300, sigMax: 800, jitMin: 0.8, jitMax: 3.0, dcMin: 12, dcMax: 22 };
+      break;
+    case 'comissionamento':
+      nDev = 6;
+      configs = { dxPct: 0.5, diagPct: 0, paramPct: 0.3, configPct: 0.2, lostPct: 0, sigMin: 750, sigMax: 1000, jitMin: 0.3, jitMax: 0.7, dcMin: 23, dcMax: 25 };
+      break;
+    case 'grande':
+      nDev = 25;
+      configs = { dxPct: 0.7, diagPct: 0.1, paramPct: 0.08, configPct: 0.05, lostPct: 0.07, sigMin: 400, sigMax: 980, jitMin: 0.3, jitMax: 2.5, dcMin: 15, dcMax: 25 };
+      break;
+    case 'random':
+    default:
+      nDev = RI(5, 20);
+      configs = { dxPct: R(0.3,0.9), diagPct: R(0,0.2), paramPct: R(0,0.15), configPct: R(0,0.15), lostPct: R(0,0.2), sigMin: RI(300,600), sigMax: RI(700,1000), jitMin: R(0.2,1), jitMax: R(1,3), dcMin: RI(12,20), dcMax: RI(20,26) };
+      // Normalize
+      const total = configs.dxPct + configs.diagPct + configs.paramPct + configs.configPct + configs.lostPct;
+      configs.dxPct /= total; configs.diagPct /= total; configs.paramPct /= total; configs.configPct /= total; configs.lostPct /= total;
+      break;
+  }
+
+  // Gerar endereços únicos (3-126)
+  addrs = [];
+  while (addrs.length < nDev) {
+    const a = RI(2, 126);
+    if (!addrs.includes(a) && a !== 1) addrs.push(a);
+  }
+  addrs.sort((a,b) => a - b);
+
+  // Gerar devices
+  addrs.forEach((addr, i) => {
+    const cat = DEVICE_CATALOG[i % DEVICE_CATALOG.length];
+    const r = Math.random();
+    let type;
+    if (r < configs.dxPct) type = NODE_TYPES.SLAVE_DX;
+    else if (r < configs.dxPct + configs.diagPct) type = NODE_TYPES.SLAVE_DIAG;
+    else if (r < configs.dxPct + configs.diagPct + configs.paramPct) type = NODE_TYPES.SLAVE_PARAM_ERR;
+    else if (r < configs.dxPct + configs.diagPct + configs.paramPct + configs.configPct) type = NODE_TYPES.SLAVE_CONFIG_ERR;
+    else type = NODE_TYPES.SLAVE_LOST;
+
+    const tag = `${cat.prefix}-${1000 + i + 1}`;
+    SAMPLE_DEVICES[addr] = { type, name: cat.name, ident: cat.ident, vendor: cat.vendor, tag, status: type.replace('lm-slave-','') };
+
+    // Signal data
+    const amp = Math.round(R(configs.sigMin, configs.sigMax));
+    const jit = parseFloat(R(configs.jitMin, configs.jitMax).toFixed(2));
+    const dc = parseFloat(R(configs.dcMin, configs.dcMax).toFixed(1));
+    SIGNAL_DATA[addr] = {
+      amp, noise: Math.max(5, 60 - amp / 20), jitter: jit, dc,
+      quality: amp >= 850 ? 'Excelente' : amp >= 750 ? 'Bom' : amp >= 500 ? 'Marginal' : 'Crítico'
+    };
+  });
+
+  // Rebuild tudo
+  buildLiveMap();
+  updateSemaforo();
+  drawBargraph();
+  autoFillFromDemo();
+  calcCorrente(); calcCabo(); calcMaxDevices(); calcVdrop();
+
+  // Log
+  const labels = { saudavel:'🟢 Rede Saudável', degradada:'🟡 Rede Degradada', critica:'🔴 Rede Crítica', comissionamento:'🔧 Comissionamento', grande:'📡 Rede Grande', random:'🎲 Aleatório' };
+  log.innerHTML = `<div style="color:var(--green)">${new Date().toLocaleTimeString('pt-BR')} — ${labels[tipo] || tipo}: ${nDev} dispositivos gerados</div>` + log.innerHTML;
+  log.innerHTML = log.innerHTML.split('</div>').slice(0, 5).join('</div>') + '</div>';
+
+  // Mostrar botões de navegação
+  document.getElementById('sim-actions').style.display = 'flex';
+}
+
+// ══════════════════════════════════════════
+//  BRIDGE — Conexão com PACTware via OPC UA
+//  Camada 5
+// ══════════════════════════════════════════
+
+const BRIDGE_URL = 'http://localhost:8090';
+let bridgeConnected = false;
+let bridgePollingId = null;
+
+async function toggleBridge() {
+  if (bridgeConnected) {
+    disconnectBridge();
+  } else {
+    connectBridge();
+  }
+}
+
+async function connectBridge() {
+  updateBridgeUI('connecting');
+  
+  try {
+    const res = await fetch(BRIDGE_URL + '/api/status', { signal: AbortSignal.timeout(3000) });
+    const status = await res.json();
+    
+    if (status.connected) {
+      bridgeConnected = true;
+      updateBridgeUI('connected', status);
+      
+      // Carregar dados reais
+      await loadBridgeDevices();
+      
+      // Iniciar polling
+      bridgePollingId = setInterval(loadBridgeDevices, 5000);
+      
+    } else {
+      updateBridgeUI('error', { message: 'Bridge rodando mas OPC UA desconectado' });
+    }
+  } catch (e) {
+    updateBridgeUI('error', { message: 'Bridge não encontrado em localhost:8090. Execute profifield_bridge.py' });
+  }
+}
+
+function disconnectBridge() {
+  bridgeConnected = false;
+  if (bridgePollingId) {
+    clearInterval(bridgePollingId);
+    bridgePollingId = null;
+  }
+  updateBridgeUI('disconnected');
+}
+
+async function loadBridgeDevices() {
+  try {
+    const res = await fetch(BRIDGE_URL + '/api/network', { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    
+    if (data.devices && data.devices.length > 0) {
+      // Atualizar SAMPLE_DEVICES com dados reais
+      Object.keys(SAMPLE_DEVICES).forEach(k => delete SAMPLE_DEVICES[k]);
+      
+      data.devices.forEach(d => {
+        const addr = d.address;
+        let type = NODE_TYPES.EMPTY;
+        
+        if (d.type === 'master') type = NODE_TYPES.MASTER;
+        else if (d.status === 'data_exchange') type = NODE_TYPES.SLAVE_DX;
+        else if (d.status === 'ext_diag') type = NODE_TYPES.SLAVE_DIAG;
+        else if (d.status === 'param_error') type = NODE_TYPES.SLAVE_PARAM_ERR;
+        else if (d.status === 'config_error') type = NODE_TYPES.SLAVE_CONFIG_ERR;
+        else if (d.status === 'lost') type = NODE_TYPES.SLAVE_LOST;
+        else type = NODE_TYPES.SLAVE_IDLE;
+        
+        SAMPLE_DEVICES[addr] = {
+          type: type,
+          name: d.name || 'Device',
+          ident: d.ident || '—',
+          status: d.status || 'unknown',
+          vendor: d.vendor || '—',
+          tag: d.tag || '—'
+        };
+      });
+      
+      // Atualizar SIGNAL_DATA com medições reais
+      data.devices.forEach(d => {
+        if (d.signal_mv && d.address) {
+          SIGNAL_DATA[d.address] = {
+            amp: d.signal_mv || 800,
+            noise: Math.max(5, 60 - (d.signal_mv || 800) / 20),
+            jitter: d.jitter_us || 0.5,
+            dc: d.voltage_dc || 24,
+            quality: (d.signal_mv || 0) >= 850 ? 'Excelente' : 
+                     (d.signal_mv || 0) >= 750 ? 'Bom' : 
+                     (d.signal_mv || 0) >= 500 ? 'Marginal' : 'Crítico'
+          };
+        }
+      });
+      
+      // Refresh UI
+      buildLiveMap();
+      updateSemaforo();
+      
+      // Auto-preencher calculadoras com dados reais
+      autoFillCalculators(data);
+      
+      updateBridgeUI('connected', { 
+        device_count: data.devices.length,
+        last_update: data.last_update,
+        segment_condition: data.segment?.condition 
+      });
+    }
+  } catch (e) {
+    if (bridgeConnected) {
+      updateBridgeUI('error', { message: 'Conexão perdida com bridge' });
+      disconnectBridge();
+    }
+  }
+}
+
+function updateBridgeUI(state, info) {
+  const dot = document.getElementById('bridge-dot');
+  const status = document.getElementById('bridge-status');
+  const btn = document.getElementById('bridge-btn');
+  
+  switch (state) {
+    case 'connecting':
+      dot.style.background = 'var(--amber)';
+      status.style.color = 'var(--amber)';
+      status.textContent = 'Conectando ao bridge...';
+      btn.textContent = '⏳';
+      btn.disabled = true;
+      break;
+    case 'connected':
+      dot.style.background = 'var(--green)';
+      dot.style.boxShadow = '0 0 8px var(--green-glow)';
+      status.style.color = 'var(--green)';
+      status.textContent = `🟢 Bridge ativo — ${info?.device_count || 0} dispositivos`;
+      btn.textContent = '⛓ Desconectar';
+      btn.disabled = false;
+      btn.style.background = 'var(--red-bg)';
+      btn.style.color = 'var(--red)';
+      btn.style.borderColor = 'rgba(240,69,69,0.3)';
+      break;
+    case 'disconnected':
+      dot.style.background = 'var(--text3)';
+      dot.style.boxShadow = 'none';
+      status.style.color = 'var(--text3)';
+      status.textContent = 'Bridge desconectado';
+      btn.textContent = '🔗 Conectar';
+      btn.disabled = false;
+      btn.style.background = 'var(--green-bg)';
+      btn.style.color = 'var(--green)';
+      btn.style.borderColor = 'rgba(0,230,118,0.3)';
+      break;
+    case 'error':
+      dot.style.background = 'var(--red)';
+      dot.style.boxShadow = 'none';
+      status.style.color = 'var(--red)';
+      status.textContent = '❌ ' + (info?.message || 'Erro');
+      btn.textContent = '🔗 Reconectar';
+      btn.disabled = false;
+      btn.style.background = 'var(--green-bg)';
+      btn.style.color = 'var(--green)';
+      btn.style.borderColor = 'rgba(0,230,118,0.3)';
+      break;
+  }
+}
+
+// ══════════════════════════════════════════
+//  AUTO-FILL CALCULADORAS com dados do Bridge
+// ══════════════════════════════════════════
+
+function autoFillCalculators(data) {
+  if (!data || !data.devices) return;
+  
+  const slaves = data.devices.filter(d => d.type !== 'master');
+  if (slaves.length === 0) return;
+
+  // ── CALC 1: Corrente — preencher lista de devices ──
+  const list = document.getElementById('calc-dev-list');
+  list.innerHTML = ''; // limpar rows existentes
+  
+  let totalI = 0;
+  slaves.forEach(d => {
+    // Corrente estimada: se veio do bridge usa, senão estima pela amplitude
+    let iMa = 13; // default típico PA
+    if (d.current_ma) {
+      iMa = d.current_ma;
+    } else if (d.signal_mv) {
+      // Estimativa: devices com sinal mais forte tendem a consumir mais
+      iMa = Math.round(10 + (d.signal_mv / 1000) * 8);
+    }
+    totalI += iMa;
+    
+    const row = document.createElement('div');
+    row.className = 'calc-dev-row';
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    row.innerHTML = `<input type="text" class="rpt-input" placeholder="Tag" value="${d.tag || d.name || 'Addr ' + d.address}" style="flex:2;font-size:13px;padding:8px">
+      <input type="number" class="rpt-input" placeholder="mA" value="${iMa}" min="1" max="100" oninput="calcCorrente()" style="flex:1;font-size:13px;padding:8px">
+      <span style="font-size:12px;color:var(--text3);width:24px">mA</span>`;
+    list.appendChild(row);
+  });
+  
+  calcCorrente();
+
+  // ── CALC 2: Cabo — preencher nº devices ──
+  document.getElementById('calc-cabo-devices').value = slaves.length;
+  calcCabo();
+
+  // ── CALC 3: Máx devices — preencher planejados ──
+  document.getElementById('calc-max-plan').value = slaves.length;
+  // Estimar corrente média
+  const avgI = slaves.length > 0 ? Math.round(totalI / slaves.length) : 13;
+  document.getElementById('calc-max-idev').value = avgI;
+  calcMaxDevices();
+
+  // ── CALC 4: Queda de tensão — preencher com dados do segmento ──
+  if (data.segment) {
+    if (data.segment.voltage_dc) {
+      document.getElementById('calc-vdrop-fonte').value = Math.round(data.segment.voltage_dc);
+    }
+  }
+  document.getElementById('calc-vdrop-i').value = totalI;
+  calcVdrop();
+  
+  console.log(`[ProfiField] Calculadoras preenchidas: ${slaves.length} devices, ${totalI}mA total`);
+}
+
+// Também auto-preencher com dados DEMO quando não tem bridge
+function autoFillFromDemo() {
+  const slaves = Object.entries(SAMPLE_DEVICES).filter(([k,v]) => v.type !== NODE_TYPES.MASTER);
+  if (slaves.length === 0) return;
+
+  const list = document.getElementById('calc-dev-list');
+  list.innerHTML = '';
+  
+  let totalI = 0;
+  slaves.forEach(([addr, d]) => {
+    const sig = SIGNAL_DATA[parseInt(addr)];
+    let iMa = Math.round(10 + Math.random() * 10); // 10-20mA típico
+    if (sig) iMa = Math.round(10 + (sig.amp / 1000) * 8);
+    totalI += iMa;
+
+    const row = document.createElement('div');
+    row.className = 'calc-dev-row';
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    row.innerHTML = `<input type="text" class="rpt-input" placeholder="Tag" value="${d.tag || d.name}" style="flex:2;font-size:13px;padding:8px">
+      <input type="number" class="rpt-input" placeholder="mA" value="${iMa}" min="1" max="100" oninput="calcCorrente()" style="flex:1;font-size:13px;padding:8px">
+      <span style="font-size:12px;color:var(--text3);width:24px">mA</span>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('calc-cabo-devices').value = slaves.length;
+  document.getElementById('calc-max-plan').value = slaves.length;
+  document.getElementById('calc-vdrop-i').value = totalI;
+  
+  const avgI = Math.round(totalI / slaves.length);
+  document.getElementById('calc-max-idev').value = avgI;
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+buildLiveMap();
+updateSemaforo();
+drawBargraph();
+renderFaults();
+loadHistory();
+autoFillFromDemo(); // Preenche calculadoras com dados demo
+calcCorrente();
+calcCabo();
+calcMaxDevices();
+calcVdrop();
+try { document.getElementById('rpt-data').valueAsDate = new Date(); } catch(e) {}
+</script>
+</body>
+</html>
